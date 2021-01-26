@@ -2,3 +2,4 @@ deploy:
   provider: pypi
   username: "__token__"
   password: "$PASSWORD"
+  server: https://upload.pypi.org/legacy/
