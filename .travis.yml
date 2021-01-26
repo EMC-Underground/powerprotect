@@ -3,7 +3,8 @@ python:
 - "3.6"
 deploy:
   provider: pypi
-  username: "__token__"
+  user: "__token__"
+  distribution: sdist bdist_wheel
   edge: true
   on:
     branch: main
