@@ -1,0 +1,7 @@
+README.md
+setup.py
+powerprotect/__init__.py
+powerprotect.egg-info/PKG-INFO
+powerprotect.egg-info/SOURCES.txt
+powerprotect.egg-info/dependency_links.txt
+powerprotect.egg-info/top_level.txt
