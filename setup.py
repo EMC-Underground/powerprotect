@@ -2,7 +2,7 @@ import setuptools
 import re
 
 
-VERSIONFILE="myniftyapp/_version.py"
+VERSIONFILE="powerprotect/_version.py"
 verstrline = open(VERSIONFILE, "rt").read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
 mo = re.search(VSRE, verstrline, re.M)
