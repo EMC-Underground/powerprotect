@@ -34,8 +34,11 @@ class Ppdm:
         self.server = kwargs['server']
         self.__password = kwargs['password']
         self.username = kwargs.get('username', "admin")
-        self.headers = {'Content-Type': 'application/json'}
-        self.ppdm_login()
+        self.__token = kwargs.get('token', "")
+        self.headers = ({'Content-Type': 'application/json'}
+                        ).update({'Authorization': self.__token})
+        if not self.__token:
+            self.ppdm_login()
 
     def ppdm_login(self):
         """Login method that extends the headers property to include the
