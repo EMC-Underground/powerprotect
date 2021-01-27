@@ -1,1 +1,1 @@
-from . import ppdm
+from .ppdm import Ppdm

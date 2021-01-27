@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="powerprotect",  # Replace with your own username
-    version="0.1.2",
+    version="0.1.3",
     author="Brad Soper",
     author_email="bradley.soper@dell.com",
     description="PowerProtect Python Class",
