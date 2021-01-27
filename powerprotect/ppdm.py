@@ -1,19 +1,13 @@
 import requests
 import json
 import urllib3
-import logging
-import os
 import sys
+from powerprotect import get_module_logger
 
 urllib3.disable_warnings()
 
-logger = logging.getLogger("ppdm")
-logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
-ch = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
-                              '%(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+ppdm_logger = get_module_logger(__name__)
+ppdm_logger.propagate =  False
 
 
 """
@@ -32,29 +26,29 @@ class Ppdm:
     def __init__(self, **kwargs):
         """Create a PPDM object that is authenticated"""
         self.server = kwargs['server']
-        self.__password = kwargs['password']
+        self.__password = kwargs.get('password', "")
         self.username = kwargs.get('username', "admin")
-        self.__token = kwargs.get('token', "")
-        self.headers = ({'Content-Type': 'application/json'}
-                        ).update({'Authorization': self.__token})
-        if not self.__token:
+        self.headers = {'Content-Type': 'application/json'}
+        if 'token' in kwargs:
+            self.headers.update({'Authorization': kwargs['token']})
+        else:
             self.ppdm_login()
 
     def ppdm_login(self):
         """Login method that extends the headers property to include the
         authorization key/value"""
-        logger.debug("Method: ppdm_login")
+        ppdm_logger.debug("Method: ppdm_login")
         body = {"username": self.username, "password": self.__password}
         response = self.__rest_post("/login", body)
         self.headers.update({'Authorization': response.json()['access_token']})
 
     def get_protection_rules(self):
-        logger.debug("Method: get_protection_rules")
+        ppdm_logger.debug("Method: get_protection_rules")
         response = self.__rest_get("/protection-rules")
         return json.loads(response.text)
 
     def get_protection_rule_by_name(self, name):
-        logger.debug("Method: get_protection_rule_by_name")
+        ppdm_logger.debug("Method: get_protection_rule_by_name")
         response = self.__rest_get("/protection-rules"
                                    f"?filter=name%20eq%20%22{name}%22")
         return json.loads(response.text)["content"][0]
@@ -63,7 +57,7 @@ class Ppdm:
                                label):
         protection_policy_id = (self.get_protection_policy_by_name(policy_name)
                                 )["content"][0]["id"]
-        logger.debug("Method: create_protection_rule")
+        ppdm_logger.debug("Method: create_protection_rule")
         body = {"action": "MOVE_TO_GROUP",
                 "name": rule_name,
                 "actionResult": protection_policy_id,
@@ -83,29 +77,29 @@ class Ppdm:
         return json.loads(response.text)
 
     def update_protection_rule(self, body):
-        logger.debug("Method: update_protection_rule")
+        ppdm_logger.debug("Method: update_protection_rule")
         protection_rule_id = body["id"]
         response = self.__rest_put("/protection-rules"
                                    f"/{protection_rule_id}", body)
         return json.loads(response.text)
 
     def delete_protection_rule(self, id):
-        logger.debug("Method: delete_protection_rule")
+        ppdm_logger.debug("Method: delete_protection_rule")
         self.__rest_delete(f"/protection-rules/{id}")
 
     def get_protection_policies(self):
-        logger.debug("Method: get_protection_policies")
+        ppdm_logger.debug("Method: get_protection_policies")
         response = self.__rest_get("/protection-policies")
         return json.loads(response.text)
 
     def get_protection_policy_by_name(self, name):
-        logger.debug("Method: get_protection_policy_by_name")
+        ppdm_logger.debug("Method: get_protection_policy_by_name")
         response = self.__rest_get("/protection-policies"
                                    f"?filter=name%20eq%20%22{name}%22")
         return json.loads(response.text)
 
     def __rest_get(self, uri):
-        logger.debug("Method: __rest_get")
+        ppdm_logger.debug("Method: __rest_get")
         response = requests.get(f"https://{self.server}:8443/api/v2"
                                 f"{uri}",
                                 verify=False,
@@ -113,14 +107,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Response Code: {response.status_code} "
-                         f"Reason: {response.text} "
-                         f"Error: {e}")
+            ppdm_logger.error(f"Response Code: {response.status_code} "
+                              f"Reason: {response.text} "
+                              f"Error: {e}")
             sys.exit(1)
         return response
 
     def __rest_delete(self, uri):
-        logger.debug("Method: __rest_delete")
+        ppdm_logger.debug("Method: __rest_delete")
         response = requests.delete(f"https://{self.server}:8443/api/v2"
                                    f"{uri}",
                                    verify=False,
@@ -128,14 +122,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Response Code: {response.status_code} "
-                         f"Reason: {response.text} "
-                         f"Error: {e}")
+            ppdm_logger.error(f"Response Code: {response.status_code} "
+                              f"Reason: {response.text} "
+                              f"Error: {e}")
             sys.exit(1)
         return response
 
     def __rest_post(self, uri, body):
-        logger.debug("Method: __rest_post")
+        ppdm_logger.debug("Method: __rest_post")
         response = requests.post(f"https://{self.server}:8443/api/v2"
                                  f"{uri}",
                                  verify=False,
@@ -144,14 +138,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Response Code: {response.status_code} "
-                         f"Reason: {response.text} "
-                         f"Error: {e}")
+            ppdm_logger.error(f"Response Code: {response.status_code} "
+                              f"Reason: {response.text} "
+                              f"Error: {e}")
             sys.exit(1)
         return response
 
     def __rest_put(self, uri, body):
-        logger.debug("Method: __rest_put")
+        ppdm_logger.debug("Method: __rest_put")
         response = requests.put(f"https://{self.server}:8443/api/v2"
                                 f"{uri}",
                                 verify=False,
@@ -160,8 +154,8 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Response Code: {response.status_code} "
-                         f"Reason: {response.text} "
-                         f"Error: {e}")
+            ppdm_logger.error(f"Response Code: {response.status_code} "
+                              f"Reason: {response.text} "
+                              f"Error: {e}")
             sys.exit(1)
         return response
