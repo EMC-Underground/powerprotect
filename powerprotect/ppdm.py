@@ -54,7 +54,7 @@ class Ppdm:
         logger.debug("Method: get_protection_rule_by_name")
         response = self.__rest_get("/protection-rules"
                                    f"?filter=name%20eq%20%22{name}%22")
-        return json.loads(response.text)
+        return json.loads(response.text)["content"][0]
 
     def create_protection_rule(self, policy_name, rule_name, inventory_type,
                                label):
@@ -79,25 +79,9 @@ class Ppdm:
         response = self.__rest_post("/protection-rules", body)
         return json.loads(response.text)
 
-    def update_protection_rule(self, rule_name, inventory_type, label):
-        protection_rule_id = (self.get_protection_rule_by_name(rule_name)
-                              )["content"][0]["id"]
+    def update_protection_rule(self, body):
         logger.debug("Method: update_protection_rule")
-        body = {"action": "MOVE_TO_GROUP",
-                "name": rule_name,
-                "actionResult": protection_rule_id,
-                "conditions": [{
-                    "assetAttributeName": "userTags",
-                    "operator": "EQUALS",
-                    "assetAttributeValue": label
-                }],
-                "connditionConnector": "AND",
-                "inventorySourceType": inventory_type,
-                "priority": 1,
-                "tenant": {
-                    "id": "00000000-0000-4000-a000-000000000000"
-                }
-                }
+        protection_rule_id = body["id"]
         response = self.__rest_put("/protection-rules"
                                    f"/{protection_rule_id}", body)
         return json.loads(response.text)
