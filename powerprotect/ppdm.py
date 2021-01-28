@@ -7,7 +7,7 @@ from powerprotect import get_module_logger
 urllib3.disable_warnings()
 
 ppdm_logger = get_module_logger(__name__)
-ppdm_logger.propagate =  False
+ppdm_logger.propagate = False
 
 
 """
@@ -29,18 +29,41 @@ class Ppdm:
         self.__password = kwargs.get('password', "")
         self.username = kwargs.get('username', "admin")
         self.headers = {'Content-Type': 'application/json'}
-        if 'token' in kwargs:
-            self.headers.update({'Authorization': kwargs['token']})
-        else:
-            self.ppdm_login()
+        self.__token = kwargs.get('token', "")
+        if not self.__token:
+            self.__token = self.__login()
+        self.headers.update({'Authorization': self.__token})
 
-    def ppdm_login(self):
+    def __login(self):
         """Login method that extends the headers property to include the
         authorization key/value"""
-        ppdm_logger.debug("Method: ppdm_login")
+        ppdm_logger.debug("Method: __login")
         body = {"username": self.username, "password": self.__password}
         response = self.__rest_post("/login", body)
-        self.headers.update({'Authorization': response.json()['access_token']})
+        return response.json()['access_token']
+
+    def create_protection_rule(self, policy_name, rule_name, inventory_type,
+                               label, **kwargs):
+        protection_policy_id = (self.get_protection_policy_by_name(policy_name)
+                                )["content"][0]["id"]
+        ppdm_logger.debug("Method: create_protection_rule")
+        body = {"action": kwargs.get('action', 'MOVE_TO_GROUP'),
+                "name": rule_name,
+                "actionResult": protection_policy_id,
+                "conditions": [{
+                    "assetAttributeName": "userTags",
+                    "operator": "EQUALS",
+                    "assetAttributeValue": label
+                }],
+                "connditionConnector": "AND",
+                "inventorySourceType": inventory_type,
+                "priority": kwargs.get('priority', 1),
+                "tenant": {
+                    "id": "00000000-0000-4000-a000-000000000000"
+                }
+                }
+        response = self.__rest_post("/protection-rules", body)
+        return json.loads(response.text)
 
     def get_protection_rules(self):
         ppdm_logger.debug("Method: get_protection_rules")
@@ -53,35 +76,18 @@ class Ppdm:
                                    f"?filter=name%20eq%20%22{name}%22")
         return json.loads(response.text)["content"][0]
 
-    def create_protection_rule(self, policy_name, rule_name, inventory_type,
-                               label):
-        protection_policy_id = (self.get_protection_policy_by_name(policy_name)
-                                )["content"][0]["id"]
-        ppdm_logger.debug("Method: create_protection_rule")
-        body = {"action": "MOVE_TO_GROUP",
-                "name": rule_name,
-                "actionResult": protection_policy_id,
-                "conditions": [{
-                    "assetAttributeName": "userTags",
-                    "operator": "EQUALS",
-                    "assetAttributeValue": label
-                }],
-                "connditionConnector": "AND",
-                "inventorySourceType": inventory_type,
-                "priority": 1,
-                "tenant": {
-                    "id": "00000000-0000-4000-a000-000000000000"
-                }
-                }
-        response = self.__rest_post("/protection-rules", body)
-        return json.loads(response.text)
-
     def update_protection_rule(self, body):
         ppdm_logger.debug("Method: update_protection_rule")
         protection_rule_id = body["id"]
         response = self.__rest_put("/protection-rules"
                                    f"/{protection_rule_id}", body)
         return json.loads(response.text)
+
+    def compare_protection_rule(self, existing_rule_name, expected_rule_body):
+        ppdm_logger.debug("Method: compare_protection_rule")
+        existing_rule = self.get_protection_rule_by_name(existing_rule_name)
+        if self.__compare_body(existing_rule, expected_rule_body):
+            return True
 
     def delete_protection_rule(self, id):
         ppdm_logger.debug("Method: delete_protection_rule")
@@ -143,6 +149,11 @@ class Ppdm:
                               f"Error: {e}")
             sys.exit(1)
         return response
+
+    def __compare_body(self, server_dict, client_dict):
+        test = {**server_dict, **client_dict}
+        if server_dict == test:
+            return True
 
     def __rest_put(self, uri, body):
         ppdm_logger.debug("Method: __rest_put")

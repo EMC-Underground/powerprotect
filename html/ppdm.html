@@ -29,19 +29,13 @@
 <pre><code class="python">import requests
 import json
 import urllib3
-import logging
-import os
 import sys
+from powerprotect import get_module_logger
 
 urllib3.disable_warnings()
 
-logger = logging.getLogger(&#34;ppdm&#34;)
-logger.setLevel(os.getenv(&#34;LOG_LEVEL&#34;, &#34;INFO&#34;))
-ch = logging.StreamHandler()
-formatter = logging.Formatter(&#39;%(asctime)s - %(name)s - %(levelname)s - &#39;
-                              &#39;%(message)s&#39;)
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+ppdm_logger = get_module_logger(__name__)
+ppdm_logger.propagate =  False
 
 
 &#34;&#34;&#34;
@@ -60,35 +54,38 @@ class Ppdm:
     def __init__(self, **kwargs):
         &#34;&#34;&#34;Create a PPDM object that is authenticated&#34;&#34;&#34;
         self.server = kwargs[&#39;server&#39;]
-        self.__password = kwargs[&#39;password&#39;]
+        self.__password = kwargs.get(&#39;password&#39;, &#34;&#34;)
         self.username = kwargs.get(&#39;username&#39;, &#34;admin&#34;)
         self.headers = {&#39;Content-Type&#39;: &#39;application/json&#39;}
-        self.ppdm_login()
+        if &#39;token&#39; in kwargs:
+            self.headers.update({&#39;Authorization&#39;: kwargs[&#39;token&#39;]})
+        else:
+            self.ppdm_login()
 
     def ppdm_login(self):
         &#34;&#34;&#34;Login method that extends the headers property to include the
         authorization key/value&#34;&#34;&#34;
-        logger.debug(&#34;Method: ppdm_login&#34;)
+        ppdm_logger.debug(&#34;Method: ppdm_login&#34;)
         body = {&#34;username&#34;: self.username, &#34;password&#34;: self.__password}
         response = self.__rest_post(&#34;/login&#34;, body)
         self.headers.update({&#39;Authorization&#39;: response.json()[&#39;access_token&#39;]})
 
     def get_protection_rules(self):
-        logger.debug(&#34;Method: get_protection_rules&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_rules&#34;)
         response = self.__rest_get(&#34;/protection-rules&#34;)
         return json.loads(response.text)
 
     def get_protection_rule_by_name(self, name):
-        logger.debug(&#34;Method: get_protection_rule_by_name&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_rule_by_name&#34;)
         response = self.__rest_get(&#34;/protection-rules&#34;
                                    f&#34;?filter=name%20eq%20%22{name}%22&#34;)
-        return json.loads(response.text)
+        return json.loads(response.text)[&#34;content&#34;][0]
 
     def create_protection_rule(self, policy_name, rule_name, inventory_type,
                                label):
         protection_policy_id = (self.get_protection_policy_by_name(policy_name)
                                 )[&#34;content&#34;][0][&#34;id&#34;]
-        logger.debug(&#34;Method: create_protection_rule&#34;)
+        ppdm_logger.debug(&#34;Method: create_protection_rule&#34;)
         body = {&#34;action&#34;: &#34;MOVE_TO_GROUP&#34;,
                 &#34;name&#34;: rule_name,
                 &#34;actionResult&#34;: protection_policy_id,
@@ -107,46 +104,30 @@ class Ppdm:
         response = self.__rest_post(&#34;/protection-rules&#34;, body)
         return json.loads(response.text)
 
-    def update_protection_rule(self, rule_name, inventory_type, label):
-        protection_rule_id = (self.get_protection_rule_by_name(rule_name)
-                              )[&#34;content&#34;][0][&#34;id&#34;]
-        logger.debug(&#34;Method: update_protection_rule&#34;)
-        body = {&#34;action&#34;: &#34;MOVE_TO_GROUP&#34;,
-                &#34;name&#34;: rule_name,
-                &#34;actionResult&#34;: protection_rule_id,
-                &#34;conditions&#34;: [{
-                    &#34;assetAttributeName&#34;: &#34;userTags&#34;,
-                    &#34;operator&#34;: &#34;EQUALS&#34;,
-                    &#34;assetAttributeValue&#34;: label
-                }],
-                &#34;connditionConnector&#34;: &#34;AND&#34;,
-                &#34;inventorySourceType&#34;: inventory_type,
-                &#34;priority&#34;: 1,
-                &#34;tenant&#34;: {
-                    &#34;id&#34;: &#34;00000000-0000-4000-a000-000000000000&#34;
-                }
-                }
+    def update_protection_rule(self, body):
+        ppdm_logger.debug(&#34;Method: update_protection_rule&#34;)
+        protection_rule_id = body[&#34;id&#34;]
         response = self.__rest_put(&#34;/protection-rules&#34;
                                    f&#34;/{protection_rule_id}&#34;, body)
         return json.loads(response.text)
 
     def delete_protection_rule(self, id):
-        logger.debug(&#34;Method: delete_protection_rule&#34;)
+        ppdm_logger.debug(&#34;Method: delete_protection_rule&#34;)
         self.__rest_delete(f&#34;/protection-rules/{id}&#34;)
 
     def get_protection_policies(self):
-        logger.debug(&#34;Method: get_protection_policies&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_policies&#34;)
         response = self.__rest_get(&#34;/protection-policies&#34;)
         return json.loads(response.text)
 
     def get_protection_policy_by_name(self, name):
-        logger.debug(&#34;Method: get_protection_policy_by_name&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_policy_by_name&#34;)
         response = self.__rest_get(&#34;/protection-policies&#34;
                                    f&#34;?filter=name%20eq%20%22{name}%22&#34;)
         return json.loads(response.text)
 
     def __rest_get(self, uri):
-        logger.debug(&#34;Method: __rest_get&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_get&#34;)
         response = requests.get(f&#34;https://{self.server}:8443/api/v2&#34;
                                 f&#34;{uri}&#34;,
                                 verify=False,
@@ -154,14 +135,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response
 
     def __rest_delete(self, uri):
-        logger.debug(&#34;Method: __rest_delete&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_delete&#34;)
         response = requests.delete(f&#34;https://{self.server}:8443/api/v2&#34;
                                    f&#34;{uri}&#34;,
                                    verify=False,
@@ -169,14 +150,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response
 
     def __rest_post(self, uri, body):
-        logger.debug(&#34;Method: __rest_post&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_post&#34;)
         response = requests.post(f&#34;https://{self.server}:8443/api/v2&#34;
                                  f&#34;{uri}&#34;,
                                  verify=False,
@@ -185,14 +166,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response
 
     def __rest_put(self, uri, body):
-        logger.debug(&#34;Method: __rest_put&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_put&#34;)
         response = requests.put(f&#34;https://{self.server}:8443/api/v2&#34;
                                 f&#34;{uri}&#34;,
                                 verify=False,
@@ -201,9 +182,9 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response</code></pre>
 </details>
@@ -232,35 +213,38 @@ class Ppdm:
     def __init__(self, **kwargs):
         &#34;&#34;&#34;Create a PPDM object that is authenticated&#34;&#34;&#34;
         self.server = kwargs[&#39;server&#39;]
-        self.__password = kwargs[&#39;password&#39;]
+        self.__password = kwargs.get(&#39;password&#39;, &#34;&#34;)
         self.username = kwargs.get(&#39;username&#39;, &#34;admin&#34;)
         self.headers = {&#39;Content-Type&#39;: &#39;application/json&#39;}
-        self.ppdm_login()
+        if &#39;token&#39; in kwargs:
+            self.headers.update({&#39;Authorization&#39;: kwargs[&#39;token&#39;]})
+        else:
+            self.ppdm_login()
 
     def ppdm_login(self):
         &#34;&#34;&#34;Login method that extends the headers property to include the
         authorization key/value&#34;&#34;&#34;
-        logger.debug(&#34;Method: ppdm_login&#34;)
+        ppdm_logger.debug(&#34;Method: ppdm_login&#34;)
         body = {&#34;username&#34;: self.username, &#34;password&#34;: self.__password}
         response = self.__rest_post(&#34;/login&#34;, body)
         self.headers.update({&#39;Authorization&#39;: response.json()[&#39;access_token&#39;]})
 
     def get_protection_rules(self):
-        logger.debug(&#34;Method: get_protection_rules&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_rules&#34;)
         response = self.__rest_get(&#34;/protection-rules&#34;)
         return json.loads(response.text)
 
     def get_protection_rule_by_name(self, name):
-        logger.debug(&#34;Method: get_protection_rule_by_name&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_rule_by_name&#34;)
         response = self.__rest_get(&#34;/protection-rules&#34;
                                    f&#34;?filter=name%20eq%20%22{name}%22&#34;)
-        return json.loads(response.text)
+        return json.loads(response.text)[&#34;content&#34;][0]
 
     def create_protection_rule(self, policy_name, rule_name, inventory_type,
                                label):
         protection_policy_id = (self.get_protection_policy_by_name(policy_name)
                                 )[&#34;content&#34;][0][&#34;id&#34;]
-        logger.debug(&#34;Method: create_protection_rule&#34;)
+        ppdm_logger.debug(&#34;Method: create_protection_rule&#34;)
         body = {&#34;action&#34;: &#34;MOVE_TO_GROUP&#34;,
                 &#34;name&#34;: rule_name,
                 &#34;actionResult&#34;: protection_policy_id,
@@ -279,46 +263,30 @@ class Ppdm:
         response = self.__rest_post(&#34;/protection-rules&#34;, body)
         return json.loads(response.text)
 
-    def update_protection_rule(self, rule_name, inventory_type, label):
-        protection_rule_id = (self.get_protection_rule_by_name(rule_name)
-                              )[&#34;content&#34;][0][&#34;id&#34;]
-        logger.debug(&#34;Method: update_protection_rule&#34;)
-        body = {&#34;action&#34;: &#34;MOVE_TO_GROUP&#34;,
-                &#34;name&#34;: rule_name,
-                &#34;actionResult&#34;: protection_rule_id,
-                &#34;conditions&#34;: [{
-                    &#34;assetAttributeName&#34;: &#34;userTags&#34;,
-                    &#34;operator&#34;: &#34;EQUALS&#34;,
-                    &#34;assetAttributeValue&#34;: label
-                }],
-                &#34;connditionConnector&#34;: &#34;AND&#34;,
-                &#34;inventorySourceType&#34;: inventory_type,
-                &#34;priority&#34;: 1,
-                &#34;tenant&#34;: {
-                    &#34;id&#34;: &#34;00000000-0000-4000-a000-000000000000&#34;
-                }
-                }
+    def update_protection_rule(self, body):
+        ppdm_logger.debug(&#34;Method: update_protection_rule&#34;)
+        protection_rule_id = body[&#34;id&#34;]
         response = self.__rest_put(&#34;/protection-rules&#34;
                                    f&#34;/{protection_rule_id}&#34;, body)
         return json.loads(response.text)
 
     def delete_protection_rule(self, id):
-        logger.debug(&#34;Method: delete_protection_rule&#34;)
+        ppdm_logger.debug(&#34;Method: delete_protection_rule&#34;)
         self.__rest_delete(f&#34;/protection-rules/{id}&#34;)
 
     def get_protection_policies(self):
-        logger.debug(&#34;Method: get_protection_policies&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_policies&#34;)
         response = self.__rest_get(&#34;/protection-policies&#34;)
         return json.loads(response.text)
 
     def get_protection_policy_by_name(self, name):
-        logger.debug(&#34;Method: get_protection_policy_by_name&#34;)
+        ppdm_logger.debug(&#34;Method: get_protection_policy_by_name&#34;)
         response = self.__rest_get(&#34;/protection-policies&#34;
                                    f&#34;?filter=name%20eq%20%22{name}%22&#34;)
         return json.loads(response.text)
 
     def __rest_get(self, uri):
-        logger.debug(&#34;Method: __rest_get&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_get&#34;)
         response = requests.get(f&#34;https://{self.server}:8443/api/v2&#34;
                                 f&#34;{uri}&#34;,
                                 verify=False,
@@ -326,14 +294,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response
 
     def __rest_delete(self, uri):
-        logger.debug(&#34;Method: __rest_delete&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_delete&#34;)
         response = requests.delete(f&#34;https://{self.server}:8443/api/v2&#34;
                                    f&#34;{uri}&#34;,
                                    verify=False,
@@ -341,14 +309,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response
 
     def __rest_post(self, uri, body):
-        logger.debug(&#34;Method: __rest_post&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_post&#34;)
         response = requests.post(f&#34;https://{self.server}:8443/api/v2&#34;
                                  f&#34;{uri}&#34;,
                                  verify=False,
@@ -357,14 +325,14 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response
 
     def __rest_put(self, uri, body):
-        logger.debug(&#34;Method: __rest_put&#34;)
+        ppdm_logger.debug(&#34;Method: __rest_put&#34;)
         response = requests.put(f&#34;https://{self.server}:8443/api/v2&#34;
                                 f&#34;{uri}&#34;,
                                 verify=False,
@@ -373,9 +341,9 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            logger.error(f&#34;Response Code: {response.status_code} &#34;
-                         f&#34;Reason: {response.text} &#34;
-                         f&#34;Error: {e}&#34;)
+            ppdm_logger.error(f&#34;Response Code: {response.status_code} &#34;
+                              f&#34;Reason: {response.text} &#34;
+                              f&#34;Error: {e}&#34;)
             sys.exit(1)
         return response</code></pre>
 </details>
@@ -394,7 +362,7 @@ class Ppdm:
                            label):
     protection_policy_id = (self.get_protection_policy_by_name(policy_name)
                             )[&#34;content&#34;][0][&#34;id&#34;]
-    logger.debug(&#34;Method: create_protection_rule&#34;)
+    ppdm_logger.debug(&#34;Method: create_protection_rule&#34;)
     body = {&#34;action&#34;: &#34;MOVE_TO_GROUP&#34;,
             &#34;name&#34;: rule_name,
             &#34;actionResult&#34;: protection_policy_id,
@@ -424,7 +392,7 @@ class Ppdm:
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def delete_protection_rule(self, id):
-    logger.debug(&#34;Method: delete_protection_rule&#34;)
+    ppdm_logger.debug(&#34;Method: delete_protection_rule&#34;)
     self.__rest_delete(f&#34;/protection-rules/{id}&#34;)</code></pre>
 </details>
 </dd>
@@ -438,7 +406,7 @@ class Ppdm:
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_protection_policies(self):
-    logger.debug(&#34;Method: get_protection_policies&#34;)
+    ppdm_logger.debug(&#34;Method: get_protection_policies&#34;)
     response = self.__rest_get(&#34;/protection-policies&#34;)
     return json.loads(response.text)</code></pre>
 </details>
@@ -453,7 +421,7 @@ class Ppdm:
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_protection_policy_by_name(self, name):
-    logger.debug(&#34;Method: get_protection_policy_by_name&#34;)
+    ppdm_logger.debug(&#34;Method: get_protection_policy_by_name&#34;)
     response = self.__rest_get(&#34;/protection-policies&#34;
                                f&#34;?filter=name%20eq%20%22{name}%22&#34;)
     return json.loads(response.text)</code></pre>
@@ -469,10 +437,10 @@ class Ppdm:
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_protection_rule_by_name(self, name):
-    logger.debug(&#34;Method: get_protection_rule_by_name&#34;)
+    ppdm_logger.debug(&#34;Method: get_protection_rule_by_name&#34;)
     response = self.__rest_get(&#34;/protection-rules&#34;
                                f&#34;?filter=name%20eq%20%22{name}%22&#34;)
-    return json.loads(response.text)</code></pre>
+    return json.loads(response.text)[&#34;content&#34;][0]</code></pre>
 </details>
 </dd>
 <dt id="ppdm.Ppdm.get_protection_rules"><code class="name flex">
@@ -485,7 +453,7 @@ class Ppdm:
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_protection_rules(self):
-    logger.debug(&#34;Method: get_protection_rules&#34;)
+    ppdm_logger.debug(&#34;Method: get_protection_rules&#34;)
     response = self.__rest_get(&#34;/protection-rules&#34;)
     return json.loads(response.text)</code></pre>
 </details>
@@ -503,14 +471,14 @@ authorization key/value</p></div>
 <pre><code class="python">def ppdm_login(self):
     &#34;&#34;&#34;Login method that extends the headers property to include the
     authorization key/value&#34;&#34;&#34;
-    logger.debug(&#34;Method: ppdm_login&#34;)
+    ppdm_logger.debug(&#34;Method: ppdm_login&#34;)
     body = {&#34;username&#34;: self.username, &#34;password&#34;: self.__password}
     response = self.__rest_post(&#34;/login&#34;, body)
     self.headers.update({&#39;Authorization&#39;: response.json()[&#39;access_token&#39;]})</code></pre>
 </details>
 </dd>
 <dt id="ppdm.Ppdm.update_protection_rule"><code class="name flex">
-<span>def <span class="ident">update_protection_rule</span></span>(<span>self, rule_name, inventory_type, label)</span>
+<span>def <span class="ident">update_protection_rule</span></span>(<span>self, body)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -518,25 +486,9 @@ authorization key/value</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def update_protection_rule(self, rule_name, inventory_type, label):
-    protection_rule_id = (self.get_protection_rule_by_name(rule_name)
-                          )[&#34;content&#34;][0][&#34;id&#34;]
-    logger.debug(&#34;Method: update_protection_rule&#34;)
-    body = {&#34;action&#34;: &#34;MOVE_TO_GROUP&#34;,
-            &#34;name&#34;: rule_name,
-            &#34;actionResult&#34;: protection_rule_id,
-            &#34;conditions&#34;: [{
-                &#34;assetAttributeName&#34;: &#34;userTags&#34;,
-                &#34;operator&#34;: &#34;EQUALS&#34;,
-                &#34;assetAttributeValue&#34;: label
-            }],
-            &#34;connditionConnector&#34;: &#34;AND&#34;,
-            &#34;inventorySourceType&#34;: inventory_type,
-            &#34;priority&#34;: 1,
-            &#34;tenant&#34;: {
-                &#34;id&#34;: &#34;00000000-0000-4000-a000-000000000000&#34;
-            }
-            }
+<pre><code class="python">def update_protection_rule(self, body):
+    ppdm_logger.debug(&#34;Method: update_protection_rule&#34;)
+    protection_rule_id = body[&#34;id&#34;]
     response = self.__rest_put(&#34;/protection-rules&#34;
                                f&#34;/{protection_rule_id}&#34;, body)
     return json.loads(response.text)</code></pre>
