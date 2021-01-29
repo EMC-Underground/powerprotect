@@ -25,7 +25,7 @@ setuptools.setup(
     url="https://github.com/EMC-Underground/powerprotect",
     packages=setuptools.find_packages(),
     install_requires=[
-        'requests>=0.24.0',
+        'requests>=2.24.0',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
