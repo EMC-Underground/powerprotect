@@ -1,7 +1,6 @@
 import requests
 import json
 import urllib3
-import sys
 from powerprotect import get_module_logger
 
 urllib3.disable_warnings()
@@ -30,17 +29,17 @@ class Ppdm:
         self.username = kwargs.get('username', "admin")
         self.headers = {'Content-Type': 'application/json'}
         self.__token = kwargs.get('token', "")
-        if not self.__token:
-            self.__token = self.__login()
-        self.headers.update({'Authorization': self.__token})
+        if self.__token:
+            self.headers.update({'Authorization': self.__token})
 
-    def __login(self):
+    def login(self):
         """Login method that extends the headers property to include the
         authorization key/value"""
         ppdm_logger.debug("Method: __login")
         body = {"username": self.username, "password": self.__password}
         response = self.__rest_post("/login", body)
-        return response.json()['access_token']
+        self.headers.update({'Authorization': json.loads(response.text
+                                                         )['access_token']})
 
     def create_protection_rule(self, policy_name, rule_name, inventory_type,
                                label, **kwargs):
@@ -116,7 +115,7 @@ class Ppdm:
             ppdm_logger.error(f"Response Code: {response.status_code} "
                               f"Reason: {response.text} "
                               f"Error: {e}")
-            sys.exit(1)
+            return None
         return response
 
     def __rest_delete(self, uri):
@@ -131,7 +130,7 @@ class Ppdm:
             ppdm_logger.error(f"Response Code: {response.status_code} "
                               f"Reason: {response.text} "
                               f"Error: {e}")
-            sys.exit(1)
+            return None
         return response
 
     def __rest_post(self, uri, body):
@@ -147,7 +146,7 @@ class Ppdm:
             ppdm_logger.error(f"Response Code: {response.status_code} "
                               f"Reason: {response.text} "
                               f"Error: {e}")
-            sys.exit(1)
+            return None
         return response
 
     def __compare_body(self, server_dict, client_dict):
@@ -168,5 +167,5 @@ class Ppdm:
             ppdm_logger.error(f"Response Code: {response.status_code} "
                               f"Reason: {response.text} "
                               f"Error: {e}")
-            sys.exit(1)
+            return None
         return response

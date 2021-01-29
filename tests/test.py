@@ -1,12 +1,13 @@
-from powerprotect import Ppdm
+import sys
+sys.path.insert(0, '../powerprotect')
 
-import mock
-import unittest
+from unittest.mock import Mock, patch
+from nose.tools import assert_is_not_none
 
 
 class RestGetTestCase(unittest.TestCase):
 
-    @mock.patch('powerprotect.requests.get')
+    @patch('powerprotect.requests.get')
     def test_rest_get(self, mock_get):
         mock_get.return_value.status_code = 200
         response = Ppdm.
