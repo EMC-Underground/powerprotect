@@ -38,49 +38,69 @@ class Ppdm:
         ppdm_logger.debug("Method: __login")
         body = {"username": self.username, "password": self.__password}
         response = self.__rest_post("/login", body)
-        self.headers.update({'Authorization': json.loads(response.text
-                                                         )['access_token']})
+        self.headers.update({'Authorization': response.json()['access_token']})
 
     def create_protection_rule(self, policy_name, rule_name, inventory_type,
                                label, **kwargs):
-        protection_policy_id = (self.get_protection_policy_by_name(policy_name)
-                                )["content"][0]["id"]
         ppdm_logger.debug("Method: create_protection_rule")
-        body = {"action": kwargs.get('action', 'MOVE_TO_GROUP'),
-                "name": rule_name,
-                "actionResult": protection_policy_id,
-                "conditions": [{
-                    "assetAttributeName": "userTags",
-                    "operator": "EQUALS",
-                    "assetAttributeValue": label
+        inventory_types = ["KUBERNETES",
+                           "VMWARE_VIRTUAL_MACHINE",
+                           "FILE_SYSTEM",
+                           "MICROSOFT_SQL_DATABASE",
+                           "ORACLE_DATABASE"]
+        if inventory_type not in inventory_types:
+            ppdm_logger.error("Protection Rule not Created. Inventory Type "
+                              "not valid")
+            return None
+        protection_policy = (self.get_protection_policy_by_name(policy_name))
+        if not protection_policy:
+            ppdm_logger.error("Protection Rule not Created")
+            return None
+        body = {'action': kwargs.get('action', 'MOVE_TO_GROUP'),
+                'name': rule_name,
+                'actionResult': (protection_policy['id']),
+                'conditions': [{
+                    'assetAttributeName': 'userTags',
+                    'operator': 'EQUALS',
+                    'assetAttributeValue': label
                 }],
-                "connditionConnector": "AND",
-                "inventorySourceType": inventory_type,
-                "priority": kwargs.get('priority', 1),
-                "tenant": {
-                    "id": "00000000-0000-4000-a000-000000000000"
+                'connditionConnector': 'AND',
+                'inventorySourceType': inventory_type,
+                'priority': kwargs.get('priority', 1),
+                'tenant': {
+                    'id': '00000000-0000-4000-a000-000000000000'
                 }
                 }
         response = self.__rest_post("/protection-rules", body)
-        return json.loads(response.text)
+        if not response.ok:
+            ppdm_logger.error("Protection Rule not Created")
+            return None
+        return response.json()
 
     def get_protection_rules(self):
         ppdm_logger.debug("Method: get_protection_rules")
         response = self.__rest_get("/protection-rules")
-        return json.loads(response.text)
+        return response.json()['content']
 
     def get_protection_rule_by_name(self, name):
         ppdm_logger.debug("Method: get_protection_rule_by_name")
         response = self.__rest_get("/protection-rules"
                                    f"?filter=name%20eq%20%22{name}%22")
-        return json.loads(response.text)["content"][0]
+        if response.ok and response.json()['content']:
+            return response.json()['content'][0]
+        if not response.json()['content']:
+            ppdm_logger.error(f"Protection rule name invalid: {name}")
+        return None
 
     def update_protection_rule(self, body):
         ppdm_logger.debug("Method: update_protection_rule")
         protection_rule_id = body["id"]
         response = self.__rest_put("/protection-rules"
                                    f"/{protection_rule_id}", body)
-        return json.loads(response.text)
+        if not response.ok:
+            ppdm_logger.error("Protection Rule not Updated")
+            return None
+        return response.json()
 
     def compare_protection_rule(self, existing_rule_name, expected_rule_body):
         ppdm_logger.debug("Method: compare_protection_rule")
@@ -90,18 +110,27 @@ class Ppdm:
 
     def delete_protection_rule(self, id):
         ppdm_logger.debug("Method: delete_protection_rule")
-        self.__rest_delete(f"/protection-rules/{id}")
+        response = self.__rest_delete(f"/protection-rules/{id}")
+        if not response.ok:
+            ppdm_logger.error(f"Protection Rule id \"{id}\" not deleted")
+            return None
+        return {'success': 'OK'}
 
     def get_protection_policies(self):
         ppdm_logger.debug("Method: get_protection_policies")
         response = self.__rest_get("/protection-policies")
-        return json.loads(response.text)
+        return response.json()['content']
 
     def get_protection_policy_by_name(self, name):
         ppdm_logger.debug("Method: get_protection_policy_by_name")
         response = self.__rest_get("/protection-policies"
                                    f"?filter=name%20eq%20%22{name}%22")
-        return json.loads(response.text)
+        if response.ok and response.json()['content']:
+            return response.json()['content'][0]
+        if not response.json()['content']:
+            ppdm_logger.error("No protection policy found by the name: "
+                              f"{name}")
+        return None
 
     def __rest_get(self, uri):
         ppdm_logger.debug("Method: __rest_get")
@@ -112,10 +141,11 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            ppdm_logger.error(f"Response Code: {response.status_code} "
-                              f"Reason: {response.text} "
-                              f"Error: {e}")
-            return None
+            ppdm_logger.error(f"Reason: {response.text}")
+            ppdm_logger.error(f"Error: {e}")
+        ppdm_logger.debug(f"URL: https://{self.server}:8443/api/v2{uri}")
+        ppdm_logger.debug(f"API Response OK?: {response.ok}")
+        ppdm_logger.debug(f"API Status Code: {response.status_code}")
         return response
 
     def __rest_delete(self, uri):
@@ -127,10 +157,11 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            ppdm_logger.error(f"Response Code: {response.status_code} "
-                              f"Reason: {response.text} "
-                              f"Error: {e}")
-            return None
+            ppdm_logger.error(f"Reason: {response.text}")
+            ppdm_logger.error(f"Error: {e}")
+        ppdm_logger.debug(f"URL: https://{self.server}:8443/api/v2{uri}")
+        ppdm_logger.debug(f"API Response OK?: {response.ok}")
+        ppdm_logger.debug(f"API Status Code: {response.status_code}")
         return response
 
     def __rest_post(self, uri, body):
@@ -143,10 +174,11 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            ppdm_logger.error(f"Response Code: {response.status_code} "
-                              f"Reason: {response.text} "
-                              f"Error: {e}")
-            return None
+            ppdm_logger.error(f"Reason: {response.text}")
+            ppdm_logger.error(f"Error: {e}")
+        ppdm_logger.debug(f"URL: https://{self.server}:8443/api/v2{uri}")
+        ppdm_logger.debug(f"API Response OK?: {response.ok}")
+        ppdm_logger.debug(f"API Status Code: {response.status_code}")
         return response
 
     def __compare_body(self, server_dict, client_dict):
@@ -164,8 +196,9 @@ class Ppdm:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            ppdm_logger.error(f"Response Code: {response.status_code} "
-                              f"Reason: {response.text} "
-                              f"Error: {e}")
-            return None
+            ppdm_logger.error(f"Reason: {response.text}")
+            ppdm_logger.error(f"Error: {e}")
+        ppdm_logger.debug(f"URL: https://{self.server}:8443/api/v2{uri}")
+        ppdm_logger.debug(f"API Response OK?: {response.ok}")
+        ppdm_logger.debug(f"API Status Code: {response.status_code}")
         return response
