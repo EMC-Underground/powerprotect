@@ -80,6 +80,8 @@ class Ppdm:
     def get_protection_rules(self):
         ppdm_logger.debug("Method: get_protection_rules")
         response = self.__rest_get("/protection-rules")
+        if not response.ok:
+            return None
         return response.json()['content']
 
     def get_protection_rule_by_name(self, name):
