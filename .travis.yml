@@ -9,7 +9,7 @@ before_install:
   - pip install codecov
 install:
   - pip install -r requirements.txt
-script: pytest -v tests/test.py
+script: coverage run tests/test.py
 after_success:
   - codecov
 deploy:
