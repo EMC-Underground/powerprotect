@@ -1,7 +1,17 @@
 language: python
 python:
 - "3.8"
-script: echo "Hello World"
+- "3.6"
+before_install:
+  - python --version
+  - pip install -U pip
+  - pip install -U pytest
+  - pip install codecov
+install:
+  - pip install -r requirements.txt
+script: pytest -v tests/test.py
+after_success:
+  - codecov
 deploy:
   provider: pypi
   username: "__token__"
