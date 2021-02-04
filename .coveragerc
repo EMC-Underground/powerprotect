@@ -1,6 +1,5 @@
 [run]
-branch = True
-source = __YOUR_PROJECT_FOLDER__
+source = powerprotect
 
 [report]
 exclude_lines =
