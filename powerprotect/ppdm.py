@@ -128,12 +128,13 @@ class Ppdm:
             return_value.success = False
             return_value.fail_msg = response.json()
             return_value.status_code = response.status_code
-        if not response.json()['content'] or return_value.success is not None:
-            err_msg = f"Invalid protection rule name: {name}"
-            ppdm_logger.error(err_msg)
-            return_value.success = False
-            return_value.fail_msg = err_msg
+        if (not response.json()['content'] and
+            return_value.success is not False):
+            err_msg = f"Protection rule not found: {name}"
+            ppdm_logger.info(err_msg)
+            return_value.success = True
             return_value.status_code = response.status_code
+            return_value.response = {}
         if return_value.success is None:
             return_value.success = True
             return_value.response = response.json()['content'][0]
@@ -191,12 +192,13 @@ class Ppdm:
             return_value.success = False
             return_value.fail_msg = response.json()
             return_value.status_code = response.status_code
-        if not response.json()['content'] or return_value.success is False:
-            err_msg = f"Invalid protection policy name: {name}"
-            ppdm_logger.error(err_msg)
-            return_value.success = False
-            return_value.fail_msg = err_msg
+        if (not response.json()['content'] and
+            return_value.success is not False):
+            err_msg = f"protection policy not found: {name}"
+            ppdm_logger.info(err_msg)
+            return_value.success = True
             return_value.status_code = response.status_code
+            return_value.response = {}
         if return_value.success is None:
             return_value.success = True
             return_value.response = response.json()['content'][0]
