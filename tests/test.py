@@ -47,11 +47,18 @@ def test_rest_get_good(mock_get):
 
 
 @mock.patch('powerprotect.ppdm.requests.get')
+def test_rest_get_no_input (mock_get):
+    mock_get.return_value.ok = True
+    response = ppdm._Ppdm__rest_get("/valid-uri")
+    assert response.ok is True
+
+
+@mock.patch('powerprotect.ppdm.requests.get')
 def test_rest_get_bad(mock_turd):
     mock_response = mock.Mock()
     http_error = requests.exceptions.HTTPError()
     mock_response.raise_for_status.side_effect = http_error
     mock_turd.return_value = mock_response
     mock_turd.return_value.ok = False
-    response = ppdm._Ppdm__rest_get("/valid-uri")
+    response = ppdm._Ppdm__rest_get("/invalid-uri")
     assert response.ok is False
