@@ -158,10 +158,9 @@ class Ppdm:
             return_value.status_code = response.status_code
         return return_value
 
-    def compare_protection_rule(self, existing_rule_name, expected_rule_body):
+    def protection_rules_match(self, existing_rule_body, expected_rule_body):
         ppdm_logger.debug("Method: compare_protection_rule")
-        existing_rule = self.get_protection_rule_by_name(existing_rule_name)
-        return self.__compare_body(existing_rule.response, expected_rule_body)
+        return self.__compare_body(existing_rule_body, expected_rule_body)
 
     def delete_protection_rule(self, id):
         ppdm_logger.debug("Method: delete_protection_rule")
