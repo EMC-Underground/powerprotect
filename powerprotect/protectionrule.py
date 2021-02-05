@@ -49,20 +49,21 @@ class ProtectionRule:
                 self.failure = True
                 self.fail_msg = return_value.fail_msg
 
-    def update_rule(self, **kwargs):
-        policy_name = kwargs['policy_name']
-        intentory_type = kwargs['intentory_type']
-        label = kwargs['label']
+    def update_rule(self):
         if (self.exists and
-            self.ppdm.protection_rules_match(self.name,
-                                             self.target_body) is False):
+            self.__body_match(self.body, self.target_body) is False):
             self.body.update(self.target_body)
             return_value = self.ppdm.update_protection_rule(self.body)
             if return_value.success:
                 self.changed = True
                 self.get_rule()
                 self.created = True
+                self.target_body = {}
                 self.msg = f"Protection Rule {self.name} updated"
             elif return_value.success is False:
                 self.failure = True
                 self.fail_msg = return_value.fail_msg
+
+    def __body_match(self, server_dict, client_dict):
+        combined_dict = {**server_dict, **client_dict}
+        return server_dict == combined_dict
