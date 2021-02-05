@@ -1,4 +1,8 @@
 from powerprotect.ppdm import ReturnValue
+from powerprotect import get_module_logger
+
+protectionrule_logger = get_module_logger(__name__)
+protectionrule_logger.propagate = False
 
 
 class ProtectionRule:
@@ -29,6 +33,7 @@ class ProtectionRule:
                 return_value = self.ppdm.delete_protection_rule(self.body['id'])
                 self.exists = False
             if self.check_mode:
+                protectionrule_logger.info("check mode enabled, no action taken")
                 return_value = ReturnValue()
                 return_value.success = True
             if return_value.success:
@@ -51,6 +56,7 @@ class ProtectionRule:
                                                                 label=label)
                 self.get_rule()
             if self.check_mode:
+                protectionrule_logger.info("check mode enabled, no action taken")
                 return_value = ReturnValue()
                 return_value.success = True
             if return_value.success:
@@ -68,6 +74,7 @@ class ProtectionRule:
                 return_value = self.ppdm.update_protection_rule(self.body)
                 self.get_rule()
             if self.check_mode:
+                protectionrule_logger.info("check mode enabled, no action taken")
                 return_value = ReturnValue()
                 return_value.success = True
             if return_value.success:
