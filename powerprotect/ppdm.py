@@ -124,21 +124,21 @@ class Ppdm:
         return_value = ReturnValue()
         response = self.__rest_get("/protection-rules"
                                    f"?filter=name%20eq%20%22{name}%22")
-        if not response.ok:
+        if response.ok is False:
             return_value.success = False
             return_value.fail_msg = response.json()
             return_value.status_code = response.status_code
-        if (not response.json()['content'] and
-            return_value.success is not False):
-            err_msg = f"Protection rule not found: {name}"
-            ppdm_logger.info(err_msg)
-            return_value.success = True
-            return_value.status_code = response.status_code
-            return_value.response = {}
-        if return_value.success is None:
-            return_value.success = True
-            return_value.response = response.json()['content'][0]
-            return_value.status_code = response.status_code
+        if response.ok:
+            if not response.json()['content']:
+                err_msg = f"Protection rule not found: {name}"
+                ppdm_logger.info(err_msg)
+                return_value.success = True
+                return_value.status_code = response.status_code
+                return_value.response = {}
+            else:
+                return_value.success = True
+                return_value.response = response.json()['content'][0]
+                return_value.status_code = response.status_code
         return return_value
 
     def update_protection_rule(self, body):
