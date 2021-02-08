@@ -23,6 +23,8 @@ class ProtectionRule(Ppdm):
             self.target_body = {}
             self.url = ""
             Ppdm.__init__(self, **kwargs)
+            if 'token' not in kwargs:
+                self.login()
             self.get_rule()
         except KeyError as e:
             protectionrule_logger.error(f"Missing required field: {e}")
