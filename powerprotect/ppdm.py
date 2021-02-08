@@ -54,9 +54,20 @@ class Ppdm:
         """Login method that extends the headers property to include the
         authorization key/value"""
         ppdm_logger.debug("Method: __login")
+        return_value = ReturnValue()
         body = {"username": self.username, "password": self.__password}
         response = self.__rest_post("/login", body)
-        self.headers.update({'Authorization': response.json()['access_token']})
+        if response.ok is False:
+            ppdm_logger.error("Authentication Error")
+            return_value.success = False
+            return_value.fail_msg = response.json()
+            return_value.status_code = response.status_code
+        elif response.ok:
+            return_value.success = True
+            return_value.response = response.json()
+            return_value.status_code = response.status_code
+            self.headers.update({'Authorization': response.json()['access_token']})
+        return return_value
 
     def create_protection_rule(self, policy_name, rule_name, inventory_type,
                                label, **kwargs):
