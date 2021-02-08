@@ -80,7 +80,7 @@ class ProtectionRule(Ppdm):
 
     def update_rule(self):
         if (self.exists and
-                helpers.__body_match(self.body, self.target_body) is False):
+                helpers._body_match(self.body, self.target_body) is False):
             self.body.update(self.target_body)
             if not self.check_mode:
                 return_value = self.__update_protection_rule(self.body)

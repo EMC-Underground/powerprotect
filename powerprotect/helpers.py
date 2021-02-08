@@ -13,6 +13,6 @@ class ReturnValue:
         self.response = None
 
 
-def __body_match(self, server_dict, client_dict):
+def _body_match(self, server_dict, client_dict):
     combined_dict = {**server_dict, **client_dict}
     return server_dict == combined_dict
