@@ -21,3 +21,10 @@ def test_body_match_invalid_input():
     with pytest.raises(Exception) as e_info:
         output = helpers._body_match(invalid, invalid)
     assert e_info is not None
+
+def test_return_value_class():
+    return_value = helpers.ReturnValue()
+    assert return_value.success is None
+    assert return_value.fail_msg is None
+    assert return_value.status_code is None
+    assert return_value.response is None
