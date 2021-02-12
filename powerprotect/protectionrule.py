@@ -22,9 +22,9 @@ class ProtectionRule(Ppdm):
             self.body = {}
             self.target_body = {}
             self.url = ""
-            Ppdm.__init__(self, **kwargs)
+            super().__init__(**kwargs)
             if 'token' not in kwargs:
-                self.login()
+                super().login()
             self.get_rule()
         except KeyError as e:
             protectionrule_logger.error(f"Missing required field: {e}")
@@ -164,8 +164,8 @@ class ProtectionRule(Ppdm):
     def __get_protection_rule_by_name(self, name):
         protectionrule_logger.debug("Method: get_protection_rule_by_name")
         return_value = helpers.ReturnValue()
-        response = self._rest_get("/protection-rules"
-                                  f"?filter=name%20eq%20%22{name}%22")
+        response = super()._rest_get("/protection-rules"
+                                     f"?filter=name%20eq%20%22{name}%22")
         if response.ok is False:
             return_value.success = False
             return_value.fail_msg = response.json()
