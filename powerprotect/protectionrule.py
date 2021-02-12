@@ -211,7 +211,7 @@ class ProtectionRule(Ppdm):
             return_value.fail_msg = response.json()
         if return_value.success is None:
             return_value.success = True
-            return_value.response = f"""Protection Rule id \"{id}\"
-                                    successfully  deleted"""
+            return_value.response = f"Protection Rule id \"{id}\" "\
+                                    "successfully deleted"
         return_value.status_code = response.status_code
         return return_value

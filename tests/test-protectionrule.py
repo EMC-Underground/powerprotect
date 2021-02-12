@@ -44,3 +44,29 @@ class TestProtectionRule(TestCase):
         self.assertFalse(test_rule.success)
         self.assertDictEqual(test_rule.fail_msg, content_example)
         self.assertEqual(test_rule.status_code, 400)
+
+    @mock.patch('powerprotect.ppdm.Ppdm._rest_delete')
+    def test_delete_protection_rule_good(self, mock_rest_delete):
+        mock_rest_delete.return_value.ok = True
+        mock_rest_delete.return_value.status_code = 200
+        test_rule = (powerprotect.ProtectionRule.
+                     _ProtectionRule__delete_protection_rule(
+                         powerprotect.ProtectionRule, "0000-1234"))
+        self.assertTrue(test_rule.success)
+        self.assertEqual(test_rule.status_code, 200)
+        self.assertEqual(test_rule.response,
+                         "Protection Rule id \"0000-1234\" "
+                         "successfully deleted")
+
+    @mock.patch('powerprotect.ppdm.Ppdm._rest_delete')
+    def test_delete_protection_rule_bad(self, mock_rest_delete):
+        content_example = {'key': 'value'}
+        mock_rest_delete.return_value.ok = False
+        mock_rest_delete.return_value.json.return_value = content_example
+        mock_rest_delete.return_value.status_code = 401
+        test_rule = (powerprotect.ProtectionRule.
+                     _ProtectionRule__delete_protection_rule(
+                         powerprotect.ProtectionRule, "0000-1234"))
+        self.assertFalse(test_rule.success)
+        self.assertEqual(test_rule.status_code, 401)
+        self.assertDictEqual(test_rule.fail_msg, content_example)
