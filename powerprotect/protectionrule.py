@@ -2,7 +2,6 @@ from powerprotect.ppdm import Ppdm
 from powerprotect import exceptions
 from powerprotect import get_module_logger
 from powerprotect import helpers
-from copy import deepcopy
 
 protectionrule_logger = get_module_logger(__name__)
 protectionrule_logger.propagate = False
@@ -117,10 +116,13 @@ class ProtectionRule(Ppdm):
         if return_value.success is None:
             protection_policy = (self.get_protection_policy_by_name(
                 policy_name))
-            return_value = deepcopy(protection_policy)
-            return_value.response = None
-            return_value.response_code = None
-        if return_value.success is True:
+            if protection_policy.success is False:
+                err_msg = f"Protection Policy not found: {policy_name}"
+                protectionrule_logger.error(err_msg)
+                return_value.success = False
+                return_value.fail_msg = (err_msg)
+                return_value.status_code = protection_policy.status_code
+        if protection_policy.success is True:
             body = {'action': kwargs.get('action', 'MOVE_TO_GROUP'),
                     'name': rule_name,
                     'actionResult': (protection_policy.response['id']),
@@ -142,7 +144,7 @@ class ProtectionRule(Ppdm):
                 return_value.success = False
                 return_value.fail_msg = response.json()
                 return_value.status_code = response.status_code
-            elif response.ok:
+            elif response.ok is True:
                 return_value.success = True
                 return_value.response = response.json()
                 return_value.status_code = response.status_code
