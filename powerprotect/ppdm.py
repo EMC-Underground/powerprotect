@@ -86,6 +86,19 @@ class Ppdm:
             return_value.status_code = response.status_code
         return return_value
 
+    def __get_protection_rules(self):
+        ppdm_logger.debug("Method: __get_protection_rules")
+        return_value = helpers.ReturnValue()
+        response = self._rest_get("/protection-rules")
+        if response.ok:
+            return_value.response = response.json()
+            return_value.success = True
+        elif not response.ok:
+            return_value.success = False
+            return_value.fail_msg = 'API Failure'
+            return_value.status_code = response.status_code
+        return return_value
+
     def _rest_get(self, uri):
         ppdm_logger.debug("Method: _rest_get")
         response = requests.get(f"https://{self.server}:8443/api/v2"

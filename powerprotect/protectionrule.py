@@ -122,7 +122,7 @@ class ProtectionRule(Ppdm):
                 return_value.success = False
                 return_value.fail_msg = (err_msg)
                 return_value.status_code = protection_policy.status_code
-        if protection_policy.success is True:
+        if return_value.success is None:
             body = {'action': kwargs.get('action', 'MOVE_TO_GROUP'),
                     'name': rule_name,
                     'actionResult': (protection_policy.response['id']),
@@ -148,19 +148,6 @@ class ProtectionRule(Ppdm):
                 return_value.success = True
                 return_value.response = response.json()
                 return_value.status_code = response.status_code
-        return return_value
-
-    def __get_protection_rules(self):
-        protectionrule_logger.debug("Method: get_protection_rules")
-        return_value = helpers.ReturnValue()
-        response = self._rest_get("/protection-rules")
-        if response.ok:
-            return_value.response = response.json()
-            return_value.success = True
-        elif not response.ok:
-            return_value.success = False
-            return_value.fail_msg = 'API Failure'
-            return_value.status_code = response.status_code
         return return_value
 
     def __get_protection_rule_by_name(self, name):
