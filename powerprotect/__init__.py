@@ -16,6 +16,7 @@ main_logger = get_module_logger(__name__)
 
 from .ppdm import Ppdm
 from .protectionrule import ProtectionRule
+from .protectionpolicy import ProtectionPolicy
 from ._version import __version__
 
 main_logger.debug(f"Module Version: {__version__}")

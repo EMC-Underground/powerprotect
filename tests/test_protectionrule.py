@@ -6,6 +6,7 @@ import powerprotect
 
 class TestGetProtectionRulebyName(TestCase):
     def setUp(self):
+
         self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
         self.mock_protection_rule.name = "test_rule"
         patcher_rest_get = mock.patch('powerprotect.protectionrule.'
