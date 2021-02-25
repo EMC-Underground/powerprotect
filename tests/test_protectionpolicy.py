@@ -121,6 +121,7 @@ class TestGetProtectionPolicyByName(TestCase):
         self.assertDictEqual(test.fail_msg, {})
         self.assertEqual(test.status_code, 401)
 
+
 class TestDeletePolicy(TestCase):
 
     def setUp(self):
@@ -133,12 +134,27 @@ class TestDeletePolicy(TestCase):
 
     def test_policy_doesnt_exist(self):
         self.mock_protection_policy.exists = False
-        powerprotect.ProtectionPolicy.delete_policy(self.mock_protection_policy)
+        powerprotect.ProtectionPolicy.delete_policy(
+            self.mock_protection_policy)
         self.assertEqual(len(self.mock_protection_policy.method_calls), 0)
         self.assertFalse(self.mock_protection_policy.exists)
 
     def test_policy_exist_no_checkmode(self):
         self.mock_protection_policy.exists = True
         self.mock_protection_policy.check_mode = False
-        powerprotect.ProtectionPolicy.delete_policy(self.mock_protection_policy)
+        powerprotect.ProtectionPolicy.delete_policy(
+            self.mock_protection_policy)
         self.assertFalse(self.mock_protection_policy.exists)
+
+    def test_policy_exist_yes_checkmode(self):
+        self.mock_protection_policy.exists = True
+        self.mock_protection_policy.check_mode = True
+        powerprotect.ProtectionPolicy.delete_policy(
+            self.mock_protection_policy)
+        self.assertFalse(self.mock_protection_policy.exists)
+
+    def test_policy_exists_success_is_false(self):
+        self.mock_protection_policy.success = False
+        powerprotect.ProtectionPolicy.delete_policy(
+            self.mock_protection_policy)
+        self.assert
