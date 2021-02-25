@@ -157,4 +157,3 @@ class TestDeletePolicy(TestCase):
         self.mock_protection_policy.success = False
         powerprotect.ProtectionPolicy.delete_policy(
             self.mock_protection_policy)
-        self.assert
