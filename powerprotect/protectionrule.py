@@ -34,8 +34,8 @@ class ProtectionRule(Ppdm):
         protection_rule = self.__get_protection_rule_by_name()
         if bool(protection_rule.response) is not False:
             self.exists = True
-            self.body = protection_rule.response
             self.id = protection_rule.response['id']
+        self.body = protection_rule.response
 
     def delete_rule(self):
         if self.exists:
