@@ -6,6 +6,7 @@ import powerprotect
 
 class TestGetProtectionRulebyName(TestCase):
     def setUp(self):
+
         self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
         self.mock_protection_rule.name = "test_rule"
         patcher_rest_get = mock.patch('powerprotect.protectionrule.'
@@ -182,7 +183,7 @@ class TestDeleteProtectionRule(TestCase):
                                          'Ppdm._rest_delete')
         self.mock_rest_delete = patcher_rest_delete.start()
         self.addCleanup(mock.patch.stopall)
-
+                         
     def tearDown(self):
         self.mock_protection_rule = None
 
