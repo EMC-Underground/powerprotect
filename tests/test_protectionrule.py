@@ -93,13 +93,15 @@ class TestCreateProtectionRule(TestCase):
                                                 '_by_name')
         self.mock_get_policy_by_name = patcher_get_policy_by_name.start()
         self.addCleanup(mock.patch.stopall)
+        self.rule_dict_good = {'policy_name': 'valid_policy',
+                               'rule_name': 'test_rule',
+                               'inventory_type': 'KUBERNETES',
+                               'label': 'valid_label'}
+        self.rule_dict_bad = self.rule_dict_good.copy()
+        self.rule_dict_bad.update('
 
     def test_create_protection_rule_good(self):
         content_example = {'key': 'value'}
-        rule_dict = {'policy_name': 'valid_policy',
-                     'rule_name': 'test_rule',
-                     'inventory_type': 'KUBERNETES',
-                     'label': 'valid_label'}
         self.mock_rest_post.return_value.ok = True
         self.mock_rest_post.return_value.json.return_value = content_example
         self.mock_rest_post.return_value.status_code = 200
@@ -107,22 +109,18 @@ class TestCreateProtectionRule(TestCase):
         test_rule = (powerprotect.ProtectionRule.
                      _ProtectionRule__create_protection_rule(
                          powerprotect.ProtectionRule,
-                         **rule_dict))
+                         **self.rule_dict_good))
         self.assertTrue(test_rule.success)
         self.assertEqual(test_rule.status_code, 200)
         self.assertDictEqual(test_rule.response, content_example)
 
     def test_create_protection_rule_bad_policy(self):
-        rule_dict = {'policy_name': 'invalid_policy',
-                     'rule_name': 'test_rule',
-                     'inventory_type': 'KUBERNETES',
-                     'label': 'valid_label'}
         self.mock_get_policy_by_name.return_value.success = False
         self.mock_get_policy_by_name.return_value.status_code = 400
         test_rule = (powerprotect.ProtectionRule.
                      _ProtectionRule__create_protection_rule(
                          powerprotect.ProtectionRule,
-                         **rule_dict))
+                         **self.rule_dict_good))
         self.assertFalse(test_rule.success)
         self.assertEqual(test_rule.status_code, 400)
         self.assertEqual(test_rule.fail_msg,
@@ -193,3 +191,18 @@ class TestDeleteProtectionRule(TestCase):
         self.assertFalse(test_rule.success)
         self.assertEqual(test_rule.status_code, 401)
         self.assertDictEqual(test_rule.fail_msg, content_example)
+
+
+class TestGetRule(TestCase):
+    def setUp(self):
+        patcher_get_rule_by_name = mock.patch('powerprotect.protectionrule.'
+                                              'ProtectionRule._ProtectionRule'
+                                              '__get_protection_rule_by_name')
+        self.mock_get_rule_by_name = patcher_get_rule_by_name.start()
+        patcher_test_protection_rule = mock.patch('powerprotect.'
+                                                  'protectionrule.'
+                                                  'ProtectionRule')
+        self.mock_test_protection_rule = patcher_test_protection_rule.start()
+
+    def test_get_rule_exists(self):
+
