@@ -54,7 +54,7 @@ class Ppdm:
             return_value.success = True
             return_value.response = response.json()
             return_value.status_code = response.status_code
-            self.__token = response.json()['access_token']
+            self._token = response.json()['access_token']
             self.headers.update(
                 {'Authorization': response.json()['access_token']})
         return return_value
