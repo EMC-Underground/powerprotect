@@ -30,12 +30,14 @@ class ProtectionPolicy(Ppdm):
             raise exceptions.PpdmException(f"Missing required field: {e}")
 
     def get_policy(self):
-        protection_rule = self.__get_protection_rule_by_name(self.name)
+        protection_rule = self.__get_protection_policy_by_name()
         if bool(protection_rule.response) is not False:
             self.exists = True
-            self.body = protection_rule.response
+        self.body = protection_rule.response
 
-    def delete_rule(self):
+    def delete_policy(self):
+        pass
+    """
         if self.exists:
             if not self.check_mode:
                 return_value = self.__delete_protection_rule(self.body['id'])
@@ -52,6 +54,7 @@ class ProtectionPolicy(Ppdm):
             elif return_value.success is False:
                 self.failure = True
                 self.fail_msg = return_value.fail_msg
+                """
 
     def create_rule(self, **kwargs):
         policy_name = kwargs['policy_name']
@@ -150,18 +153,18 @@ class ProtectionPolicy(Ppdm):
                 return_value.status_code = response.status_code
         return return_value
 
-    def __get_protection_rule_by_name(self, name):
-        protectionpolicy_logger.debug("Method: get_protection_rule_by_name")
+    def __get_protection_policy_by_name(self):
+        protectionpolicy_logger.debug("Method: get_protection_policy_by_name")
         return_value = helpers.ReturnValue()
         response = super()._rest_get("/protection-rules"
-                                     f"?filter=name%20eq%20%22{name}%22")
+                                     f"?filter=name%20eq%20%22{self.name}%22")
         if response.ok is False:
             return_value.success = False
             return_value.fail_msg = response.json()
             return_value.status_code = response.status_code
         if response.ok:
             if not response.json()['content']:
-                err_msg = f"Protection rule not found: {name}"
+                err_msg = f"Protection rule not found: {self.name}"
                 protectionpolicy_logger.info(err_msg)
                 return_value.success = True
                 return_value.status_code = response.status_code
@@ -189,7 +192,9 @@ class ProtectionPolicy(Ppdm):
             return_value.status_code = response.status_code
         return return_value
 
-    def __delete_protection_rule(self, id):
+    def __deleteprotection_rule(self, id):
+        pass
+    """
         protectionpolicy_logger.debug("Method: delete_protection_rule")
         return_value = helpers.ReturnValue()
         response = self._rest_delete(f"/protection-rules/{id}")
@@ -204,3 +209,4 @@ class ProtectionPolicy(Ppdm):
                                     "successfully deleted"
         return_value.status_code = response.status_code
         return return_value
+    """
