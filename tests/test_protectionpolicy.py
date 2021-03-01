@@ -127,6 +127,8 @@ class TestDeletePolicy(TestCase):
     def setUp(self):
         self.mock_protection_policy = mock.MagicMock(
             spec=powerprotect.ProtectionPolicy)
+        self.mock_helpers_return_value = mock.MagicMock(
+            spec=powerprotect.helpers.ReturnValue)
         self.mock_protection_policy.name = 'test'
 
     def tearDown(self):
@@ -147,14 +149,19 @@ class TestDeletePolicy(TestCase):
             self.mock_protection_policy)
         #self.assertFalse(self.mock_protection_policy.exists)
 
-    def test_policy_exist_yes_checkmode(self):
+    def test_policy_exists_check_mode_is_true(self):
         self.mock_protection_policy.exists = True
         self.mock_protection_policy.check_mode = True
+        self.mock_helpers_return_value.success = None
+        print(self.mock_helpers_return_value.__dict__)
         powerprotect.ProtectionPolicy.delete_policy(
             self.mock_protection_policy)
-        #self.assertFalse(self.mock_protection_policy.exists)
+        self.assertTrue(self.mock_protection_policy.success)
+        self.assertEqual(self.mock_protection_policy.body, {})
 
-    def test_policy_exists_success_is_false(self):
-        self.mock_protection_policy.success = False
+    def test_policy_exists_check_mode_is_false(self):
+        self.mock_protection_policy.exists = True
+        self.mock_protection_policy.check_mode = False
+        self.mock_protection_policy.body = {'id': '12345'}
         powerprotect.ProtectionPolicy.delete_policy(
             self.mock_protection_policy)

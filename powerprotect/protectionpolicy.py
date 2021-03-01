@@ -36,8 +36,6 @@ class ProtectionPolicy(Ppdm):
         self.body = protection_rule.response
 
     def delete_policy(self):
-        pass
-    """
         if self.exists:
             if not self.check_mode:
                 return_value = self.__delete_protection_rule(self.body['id'])
@@ -54,7 +52,6 @@ class ProtectionPolicy(Ppdm):
             elif return_value.success is False:
                 self.failure = True
                 self.fail_msg = return_value.fail_msg
-                """
 
     def create_rule(self, **kwargs):
         policy_name = kwargs['policy_name']
@@ -70,7 +67,7 @@ class ProtectionPolicy(Ppdm):
                 self.get_rule()
             if self.check_mode:
                 protectionpolicy_logger.info("check mode enabled, "
-                                           "no action taken")
+                                             "no action taken")
                 return_value = helpers.ReturnValue()
                 return_value.success = True
             if return_value.success:
@@ -91,7 +88,7 @@ class ProtectionPolicy(Ppdm):
                 self.get_rule()
             if self.check_mode:
                 protectionpolicy_logger.info("check mode enabled, "
-                                           "no action taken")
+                                             "no action taken")
                 return_value = helpers.ReturnValue()
                 return_value.success = True
             if return_value.success:
@@ -192,15 +189,13 @@ class ProtectionPolicy(Ppdm):
             return_value.status_code = response.status_code
         return return_value
 
-    def __deleteprotection_rule(self, id):
-        pass
-    """
+    def __delete_protection_rule(self, id):
         protectionpolicy_logger.debug("Method: delete_protection_rule")
         return_value = helpers.ReturnValue()
         response = self._rest_delete(f"/protection-rules/{id}")
         if not response.ok:
             protectionpolicy_logger.error(f"Protection Rule id \"{id}\" "
-                                        "not deleted")
+                                          "not deleted")
             return_value.success = False
             return_value.fail_msg = response.json()
         if return_value.success is None:
@@ -209,4 +204,3 @@ class ProtectionPolicy(Ppdm):
                                     "successfully deleted"
         return_value.status_code = response.status_code
         return return_value
-    """
