@@ -269,7 +269,9 @@ class TestUpdateRule(TestCase):
         self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
         self.mock_protection_rule.name = "test_rule"
         self.mock_protection_rule.exists = False
-        self.mock_protection_rule.body = {}
+        self.mock_protection_rule.changed = False
+        self.mock_protection_rule.body = {'orig': 'value'}
+        self.mock_protection_rule.target_body = {}
         patcher_body_match = mock.patch('powerprotect.helpers._body_match')
         self.mock_body_match = patcher_body_match.start()
         self.addCleanup(mock.patch.stopall)
@@ -277,30 +279,66 @@ class TestUpdateRule(TestCase):
     def tearDown(self):
         self.mock_protection_rule = None
 
-    def test_get_rule_not_exists(self):
-        (self.mock_protection_rule.
-         _ProtectionRule__get_protection_rule_by_name.
-         return_value.response) = {}
-        powerprotect.ProtectionRule.get_rule(self.mock_protection_rule)
-        self.assertFalse(self.mock_protection_rule.exists)
-        self.assertDictEqual(self.mock_protection_rule.body, {})
+    def test_update_rule_not_exists(self):
+        powerprotect.ProtectionRule.update_rule(self.mock_protection_rule)
+        self.assertDictEqual(self.mock_protection_rule.target_body, {})
+        self.assertFalse(self.mock_protection_rule.changed)
 
-    def test_get_rule_exists_no_checkmode(self):
-        (self.mock_protection_rule.
-         _ProtectionRule__get_protection_rule_by_name.
-         return_value.response) = {'id': '0000-0000'}
-        powerprotect.ProtectionRule.get_rule(self.mock_protection_rule)
-        self.assertTrue(self.mock_protection_rule)
-        self.assertEqual(self.mock_protection_rule.id, '0000-0000')
-        self.assertDictEqual(self.mock_protection_rule.body,
-                             {'id': '0000-0000'})
+    def test_update_rule_exists_no_diff(self):
+        self.mock_protection_rule.exists = True
+        self.mock_body_match.return_value = True
+        powerprotect.ProtectionRule.update_rule(self.mock_protection_rule)
+        self.assertDictEqual(self.mock_protection_rule.target_body, {})
+        self.assertFalse(self.mock_protection_rule.changed)
 
-    def test_get_rule_exists_with_checkmode(self):
+    def test_update_rule_exists_no_target(self):
+        self.mock_protection_rule.exists = True
+        self.mock_body_match.return_value = True
+        powerprotect.ProtectionRule.update_rule(self.mock_protection_rule)
+        self.assertDictEqual(self.mock_protection_rule.target_body, {})
+        self.assertFalse(self.mock_protection_rule.changed)
+
+    def test_update_rule_exists_no_checkmode_success(self):
         (self.mock_protection_rule.
-         _ProtectionRule__get_protection_rule_by_name.
+         _ProtectionRule__update_protection_rule.
          return_value.response) = {'id': '0000-0000'}
-        powerprotect.ProtectionRule.get_rule(self.mock_protection_rule)
-        self.assertTrue(self.mock_protection_rule)
-        self.assertEqual(self.mock_protection_rule.id, '0000-0000')
-        self.assertDictEqual(self.mock_protection_rule.body,
-                             {'id': '0000-0000'})
+        (self.mock_protection_rule.
+         _ProtectionRule__update_protection_rule.
+         return_value.success) = True
+        self.mock_body_match.return_value = False
+        self.mock_protection_rule.check_mode = False
+        self.mock_protection_rule.exists = True
+        self.mock_protection_rule.target_body = {'new': 'things'}
+        powerprotect.ProtectionRule.update_rule(self.mock_protection_rule)
+        self.assertTrue(self.mock_protection_rule.changed)
+        self.assertDictEqual(self.mock_protection_rule.target_body, {})
+
+    def test_update_rule_exists_no_checkmode_failure(self):
+        (self.mock_protection_rule.
+         _ProtectionRule__update_protection_rule.
+         return_value.response) = {'id': '0000-0000'}
+        (self.mock_protection_rule.
+         _ProtectionRule__update_protection_rule.
+         return_value.success) = False
+        (self.mock_protection_rule.
+         _ProtectionRule__update_protection_rule.
+         return_value.msg) = "updated the rule"
+        self.mock_body_match.return_value = False
+        self.mock_protection_rule.check_mode = False
+        self.mock_protection_rule.exists = True
+        self.mock_protection_rule.target_body = {'new': 'things'}
+        powerprotect.ProtectionRule.update_rule(self.mock_protection_rule)
+        self.assertFalse(self.mock_protection_rule.changed)
+        self.assertTrue(self.mock_protection_rule.failure)
+        self.assertEqual(self.mock_protection_rule.fail_msg,
+                         "updated the rule")
+        self.assertDictEqual(self.mock_protection_rule.target_body, {})
+
+    def test_update_rule_exists_yes_checkmode(self):
+        self.mock_body_match.return_value = False
+        self.mock_protection_rule.check_mode = True
+        self.mock_protection_rule.exists = True
+        self.mock_protection_rule.target_body = {'new': 'things'}
+        powerprotect.ProtectionRule.update_rule(self.mock_protection_rule)
+        self.assertTrue(self.mock_protection_rule.changed)
+        self.assertDictEqual(self.mock_protection_rule.target_body, {})

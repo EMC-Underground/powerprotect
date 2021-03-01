@@ -50,7 +50,6 @@ class ProtectionRule(Ppdm):
                 return_body = helpers.ReturnBody()
                 return_body.success = True
             if return_body.success:
-                self.exists = False
                 self.changed = True
                 self.msg = f"Protection rule {self.name} deleted"
             elif return_body.success is False:
@@ -100,7 +99,7 @@ class ProtectionRule(Ppdm):
                 self.msg = f"Protection Rule {self.name} updated"
             elif return_body.success is False:
                 self.failure = True
-                self.fail_msg = return_body.fail_msg
+                self.fail_msg = return_body.msg
         self.target_body = {}
         self.get_rule()
 
