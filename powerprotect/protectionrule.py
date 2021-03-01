@@ -40,20 +40,20 @@ class ProtectionRule(Ppdm):
     def delete_rule(self):
         if self.exists:
             if not self.check_mode:
-                return_value = self.__delete_protection_rule()
-                self.exists = False
+                return_body = self.__delete_protection_rule()
             if self.check_mode:
                 protectionrule_logger.info("check mode enabled, "
                                            "no action taken")
-                return_value = helpers.ReturnValue()
-                return_value.success = True
-            if return_value.success:
+                return_body = helpers.ReturnBody()
+                return_body.success = True
+            if return_body.success:
+                self.exists = False
                 self.changed = True
-                self.body = {}
                 self.msg = f"Protection rule {self.name} deleted"
-            elif return_value.success is False:
+            elif return_body.success is False:
                 self.failure = True
-                self.fail_msg = return_value.fail_msg
+                self.fail_msg = return_body.fail_msg
+        self.get_rule()
 
     def create_rule(self, **kwargs):
         policy_name = kwargs['policy_name']
@@ -61,70 +61,66 @@ class ProtectionRule(Ppdm):
         label = kwargs['label']
         if not self.exists:
             if not self.check_mode:
-                return_value = self.__create_protection_rule(
+                return_body = self.__create_protection_rule(
                     rule_name=self.name,
                     policy_name=policy_name,
                     inventory_type=inventory_type,
                     label=label)
-                self.get_rule()
             if self.check_mode:
                 protectionrule_logger.info("check mode enabled, "
                                            "no action taken")
-                return_value = helpers.ReturnValue()
-                return_value.success = True
-            if return_value.success:
+                return_body = helpers.ReturnBody()
+                return_body.success = True
+            if return_body.success:
                 self.changed = True
                 self.msg = f"Protection Rule {self.name} created"
-            elif return_value.success is False:
+            elif return_body.success is False:
                 self.failure = True
-                self.fail_msg = return_value.fail_msg
+                self.fail_msg = return_body.fail_msg
         elif self.exists:
             self.msg = f"Protection Rule {self.name} already exists"
+        self.get_rule()
 
     def update_rule(self):
         if (self.exists and
+                self.target_body and
                 helpers._body_match(self.body, self.target_body) is False):
-            self.body.update(self.target_body)
             if not self.check_mode:
-                return_value = self.__update_protection_rule()
-                self.get_rule()
+                return_body = self.__update_protection_rule()
             if self.check_mode:
                 protectionrule_logger.info("check mode enabled, "
                                            "no action taken")
-                return_value = helpers.ReturnValue()
-                return_value.success = True
-            if return_value.success:
+                return_body = helpers.ReturnBody()
+                return_body.success = True
+            if return_body.success:
                 self.changed = True
-                self.target_body = {}
                 self.msg = f"Protection Rule {self.name} updated"
-            elif return_value.success is False:
+            elif return_body.success is False:
                 self.failure = True
-                self.fail_msg = return_value.fail_msg
+                self.fail_msg = return_body.fail_msg
+        self.target_body = {}
+        self.get_rule()
 
     def __create_protection_rule(self, policy_name, rule_name, inventory_type,
                                  label, **kwargs):
-        protectionrule_logger.debug("Method: create_protection_rule")
-        return_value = helpers.ReturnValue()
+        protectionrule_logger.debug("Method: __create_protection_rule")
+        return_body = helpers.ReturnBody()
         inventory_types = ["KUBERNETES",
                            "VMWARE_VIRTUAL_MACHINE",
                            "FILE_SYSTEM",
                            "MICROSOFT_SQL_DATABASE",
                            "ORACLE_DATABASE"]
         if inventory_type not in inventory_types:
-            err_msg = "Protection Rule not Created. Inventory Type not valid"
-            protectionrule_logger.error(err_msg)
-            return_value.success = False
-            return_value.fail_msg = err_msg
-        if return_value.success is None:
+            msg = "Protection Rule not Created. Inventory Type not valid"
+            return_body.success = False
+        if return_body.success is not False:
             protection_policy = (super().get_protection_policy_by_name(
                 policy_name))
             if protection_policy.success is False:
-                err_msg = f"Protection Policy not found: {policy_name}"
-                protectionrule_logger.error(err_msg)
-                return_value.success = False
-                return_value.fail_msg = (err_msg)
-                return_value.status_code = protection_policy.status_code
-        if return_value.success is None:
+                msg = f"Protection Policy not found: {policy_name}"
+                return_body.success = False
+                return_body.status_code = protection_policy.status_code
+        if return_body.success is not False:
             body = {'action': kwargs.get('action', 'MOVE_TO_GROUP'),
                     'name': rule_name,
                     'actionResult': (protection_policy.response['id']),
@@ -141,67 +137,70 @@ class ProtectionRule(Ppdm):
                     }
                     }
             response = super()._rest_post("/protection-rules", body)
-            if response.ok is False:
-                protectionrule_logger.error("Protection Rule not Created")
-                return_value.success = False
-                return_value.fail_msg = response.json()
-                return_value.status_code = response.status_code
-            elif response.ok is True:
-                return_value.success = True
-                return_value.response = response.json()
-                return_value.status_code = response.status_code
-        return return_value
+            if response.ok:
+                msg = f"Protection Rule id \"{self.name}\" " \
+                    "successfully created"
+                return_body.success = True
+            else:
+                msg = f"Protection Rule id \"{self.name}\" " \
+                    "not created"
+                return_body.success = False
+            return_body.status_code = response.status_code
+            return_body.response = response.json()
+        return_body.msg = msg
+        return return_body
 
     def __get_protection_rule_by_name(self):
         protectionrule_logger.debug("Method: get_protection_rule_by_name")
-        return_value = helpers.ReturnValue()
+        return_body = helpers.ReturnBody()
         response = super()._rest_get("/protection-rules"
                                      f"?filter=name%20eq%20%22{self.name}%22")
         if response.ok is False:
-            return_value.success = False
-            return_value.fail_msg = response.json()
-            return_value.status_code = response.status_code
+            return_body.success = False
+            return_body.fail_msg = response.json()
+            return_body.status_code = response.status_code
         if response.ok:
             if not response.json()['content']:
                 err_msg = f"Protection rule not found: {self.name}"
                 protectionrule_logger.info(err_msg)
-                return_value.success = True
-                return_value.status_code = response.status_code
-                return_value.response = {}
+                return_body.success = True
+                return_body.status_code = response.status_code
+                return_body.response = {}
             else:
-                return_value.success = True
-                return_value.response = response.json()['content'][0]
-                return_value.status_code = response.status_code
-        return return_value
+                return_body.success = True
+                return_body.response = response.json()['content'][0]
+                return_body.status_code = response.status_code
+        return return_body
 
     def __update_protection_rule(self):
         protectionrule_logger.debug("Method: update_protection_rule")
-        return_value = helpers.ReturnValue()
+        return_body = helpers.ReturnBody()
         response = super()._rest_put("/protection-rules"
                                   f"/{self.id}", self.body)
-        if not response.ok:
-            protectionrule_logger.error("Protection Rule not Updated")
-            return_value.success = False
-            return_value.fail_msg = response.json()
-            return_value.status_code = response.status_code
-        if return_value.success is None:
-            return_value.success = True
-            return_value.response = response.json()
-            return_value.status_code = response.status_code
-        return return_value
+        if response.ok:
+            msg = f"Protection Rule id \"{self.name}\" successfully updated"
+            return_body.success = True
+        else:
+            msg = f"Protection Rule id \"{self.name}\" not updated"
+            return_body.success = False
+        protectionrule_logger.debug(msg)
+        return_body.msg = msg
+        return_body.response = response.json()
+        return_body.status_code = response.status_code
+        return return_body
 
     def __delete_protection_rule(self):
-        protectionrule_logger.debug("Method: delete_protection_rule")
-        return_value = helpers.ReturnValue()
+        protectionrule_logger.debug("Method: __delete_protection_rule")
+        return_body = helpers.ReturnBody()
         response = super()._rest_delete(f"/protection-rules/{self.id}")
-        if not response.ok:
-            protectionrule_logger.error(f"Protection Rule id \"{self.id}\" "
-                                        "not deleted")
-            return_value.success = False
-            return_value.fail_msg = response.json()
-        if return_value.success is None:
-            return_value.success = True
-            return_value.response = f"Protection Rule id \"{self.id}\" "\
-                                    "successfully deleted"
-        return_value.status_code = response.status_code
-        return return_value
+        if response.ok:
+            msg = f"Protection Rule id \"{self.name}\" successfully deleted"
+            return_body.success = True
+        else:
+            msg = f"Protection Rule id \"{self.name}\" not deleted"
+            return_body.success = False
+        protectionrule_logger.debug(msg)
+        return_body.msg = msg
+        return_body.response = response.json()
+        return_body.status_code = response.status_code
+        return return_body

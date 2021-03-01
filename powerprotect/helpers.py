@@ -4,13 +4,13 @@ helpers_logger = get_module_logger(__name__)
 helpers_logger.propagate = False
 
 
-class ReturnValue:
+class ReturnBody:
 
     def __init__(self):
-        self.success = None
-        self.fail_msg = None
-        self.status_code = None
-        self.response = None
+        self.success = bool()
+        self.msg = str()
+        self.status_code = int()
+        self.response = dict()
 
 
 def _body_match(server_dict, client_dict):
