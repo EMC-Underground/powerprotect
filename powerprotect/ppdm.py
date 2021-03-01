@@ -42,22 +42,22 @@ class Ppdm:
         """Login method that extends the headers property to include the
         authorization key/value"""
         ppdm_logger.debug("Method: __login")
-        return_value = helpers.ReturnValue()
+        return_body = helpers.ReturnBody()
         body = {"username": self.username, "password": self.__password}
         response = self._rest_post("/login", body)
         if response.ok is False:
             ppdm_logger.error("Authentication Error")
-            return_value.success = False
-            return_value.fail_msg = response.json()
-            return_value.status_code = response.status_code
+            return_body.success = False
+            return_body.fail_msg = response.json()
+            return_body.status_code = response.status_code
         elif response.ok:
-            return_value.success = True
-            return_value.response = response.json()
-            return_value.status_code = response.status_code
+            return_body.success = True
+            return_body.response = response.json()
+            return_body.status_code = response.status_code
             self._token = response.json()['access_token']
             self.headers.update(
                 {'Authorization': response.json()['access_token']})
-        return return_value
+        return return_body
 
     def get_protection_policies(self):
         ppdm_logger.debug("Method: get_protection_policies")
@@ -66,38 +66,38 @@ class Ppdm:
 
     def get_protection_policy_by_name(self, name):
         ppdm_logger.debug("Method: get_protection_policy_by_name")
-        return_value = helpers.ReturnValue()
+        return_body = helpers.ReturnBody()
         response = self._rest_get("/protection-policies"
                                   f"?filter=name%20eq%20%22{name}%22")
         if not response.ok:
-            return_value.success = False
-            return_value.fail_msg = response.json()
-            return_value.status_code = response.status_code
+            return_body.success = False
+            return_body.fail_msg = response.json()
+            return_body.status_code = response.status_code
         if (not response.json()['content'] and
-                return_value.success is not False):
+                return_body.success is not False):
             err_msg = f"protection policy not found: {name}"
             ppdm_logger.info(err_msg)
-            return_value.success = True
-            return_value.status_code = response.status_code
-            return_value.response = {}
-        if return_value.success is None:
-            return_value.success = True
-            return_value.response = response.json()['content'][0]
-            return_value.status_code = response.status_code
-        return return_value
+            return_body.success = True
+            return_body.status_code = response.status_code
+            return_body.response = {}
+        if return_body.success is None:
+            return_body.success = True
+            return_body.response = response.json()['content'][0]
+            return_body.status_code = response.status_code
+        return return_body
 
     def __get_protection_rules(self):
         ppdm_logger.debug("Method: __get_protection_rules")
-        return_value = helpers.ReturnValue()
+        return_body = helpers.ReturnBody()
         response = self._rest_get("/protection-rules")
         if response.ok:
-            return_value.response = response.json()
-            return_value.success = True
+            return_body.response = response.json()
+            return_body.success = True
         elif not response.ok:
-            return_value.success = False
-            return_value.fail_msg = 'API Failure'
-            return_value.status_code = response.status_code
-        return return_value
+            return_body.success = False
+            return_body.fail_msg = 'API Failure'
+            return_body.status_code = response.status_code
+        return return_body
 
     def _rest_get(self, uri):
         ppdm_logger.debug("Method: _rest_get")

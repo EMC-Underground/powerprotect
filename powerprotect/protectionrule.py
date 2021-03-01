@@ -35,6 +35,9 @@ class ProtectionRule(Ppdm):
         if bool(protection_rule.response) is not False:
             self.exists = True
             self.id = protection_rule.response['id']
+        else:
+            self.exists = False
+            self.id = ''
         self.body = protection_rule.response
 
     def delete_rule(self):
@@ -105,6 +108,7 @@ class ProtectionRule(Ppdm):
                                  label, **kwargs):
         protectionrule_logger.debug("Method: __create_protection_rule")
         return_body = helpers.ReturnBody()
+        return_body.success = None
         inventory_types = ["KUBERNETES",
                            "VMWARE_VIRTUAL_MACHINE",
                            "FILE_SYSTEM",
@@ -113,14 +117,14 @@ class ProtectionRule(Ppdm):
         if inventory_type not in inventory_types:
             msg = "Protection Rule not Created. Inventory Type not valid"
             return_body.success = False
-        if return_body.success is not False:
+        if return_body.success is None:
             protection_policy = (super().get_protection_policy_by_name(
                 policy_name))
             if protection_policy.success is False:
                 msg = f"Protection Policy not found: {policy_name}"
                 return_body.success = False
                 return_body.status_code = protection_policy.status_code
-        if return_body.success is not False:
+        if return_body.success is None:
             body = {'action': kwargs.get('action', 'MOVE_TO_GROUP'),
                     'name': rule_name,
                     'actionResult': (protection_policy.response['id']),
