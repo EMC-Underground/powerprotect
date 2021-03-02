@@ -54,7 +54,7 @@ class ProtectionRule(Ppdm):
                 self.msg = f"Protection rule {self.name} deleted"
             elif return_body.success is False:
                 self.failure = True
-                self.fail_msg = return_body.fail_msg
+                self.fail_msg = return_body.msg
         self.get_rule()
 
     def create_rule(self, **kwargs):
@@ -78,7 +78,7 @@ class ProtectionRule(Ppdm):
                 self.msg = f"Protection Rule {self.name} created"
             elif return_body.success is False:
                 self.failure = True
-                self.fail_msg = return_body.fail_msg
+                self.fail_msg = return_body.msg
         elif self.exists:
             self.msg = f"Protection Rule {self.name} already exists"
         self.get_rule()
@@ -179,7 +179,7 @@ class ProtectionRule(Ppdm):
         protectionrule_logger.debug("Method: update_protection_rule")
         return_body = helpers.ReturnBody()
         response = super()._rest_put("/protection-rules"
-                                  f"/{self.id}", self.body)
+                                     f"/{self.id}", self.body)
         if response.ok:
             msg = f"Protection Rule id \"{self.name}\" successfully updated"
             return_body.success = True
