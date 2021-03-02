@@ -70,20 +70,20 @@ class Ppdm:
         response = self._rest_get("/protection-policies"
                                   f"?filter=name%20eq%20%22{name}%22")
         if not response.ok:
+            msg = f"Protection Policy \"{name}\" not found"
             return_body.success = False
-            return_body.fail = response.json()
-            return_body.status_code = response.status_code
-        if (not response.json()['content'] and
-                return_body.success is not False):
-            err_msg = f"protection policy not found: {name}"
-            ppdm_logger.info(err_msg)
-            return_body.success = True
-            return_body.status_code = response.status_code
-            return_body.response = {}
-        if return_body.success is None:
-            return_body.success = True
-            return_body.response = response.json()['content'][0]
-            return_body.status_code = response.status_code
+            return_body.response = response.json()
+        else:
+            if response.json()['content']:
+                msg = f"Protection Policy \"{name}\" found"
+                return_body.success = True
+                return_body.response = response.json()['content'][0]
+            else:
+                msg = f"Protection Policy \"{name}\" not found"
+                return_body.success = True
+                return_body.response = {}
+        return_body.msg = msg
+        return_body.status_code = response.status_code
         return return_body
 
     def __get_protection_rules(self):
