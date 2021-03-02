@@ -71,7 +71,7 @@ class Ppdm:
                                   f"?filter=name%20eq%20%22{name}%22")
         if not response.ok:
             return_body.success = False
-            return_body.fail_msg = response.json()
+            return_body.fail = response.json()
             return_body.status_code = response.status_code
         if (not response.json()['content'] and
                 return_body.success is not False):
