@@ -467,11 +467,14 @@ class TestCreateRule(TestCase):
 class TestInit(TestCase):
     def setUp(self):
         self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
-        self.rule_dict_good = {'name': 'test_rule',
+        self.rule_dict_token = {'name': 'test_rule',
                                'server': 'server',
                                'token': 'token'}
-        self.rule_dict_bad = self.rule_dict_good.copy()
+        self.rule_dict_bad = self.rule_dict_token.copy()
         self.rule_dict_bad.pop('name')
+        self.rule_dict_password = self.rule_dict_token.copy()
+        self.rule_dict_password.pop('token')
+        self.rule_dict_password.update({'password': 'password'})
         patcher_get_policy = mock.patch(
             'powerprotect.protectionrule.ProtectionRule.get_rule')
         self.mock_get_policy = patcher_get_policy.start()
@@ -484,7 +487,7 @@ class TestInit(TestCase):
         self.mock_protection_policy = None
 
     def test_with_token(self):
-        test_rule = powerprotect.ProtectionRule(**self.rule_dict_good)
+        test_rule = powerprotect.ProtectionRule(**self.rule_dict_token)
         self.assertEqual(test_rule.name, "test_rule")
         self.assertEqual(test_rule.server, "server")
         self.assertEqual(test_rule._token, "token")
@@ -495,3 +498,11 @@ class TestInit(TestCase):
         self.assertRaises(powerprotect.PpdmException,
                           powerprotect.ProtectionRule,
                           **self.rule_dict_bad)
+
+    def test_with_token(self):
+        test_rule = powerprotect.ProtectionRule(**self.rule_dict_password)
+        self.assertEqual(test_rule.name, "test_rule")
+        self.assertEqual(test_rule.server, "server")
+        self.assertEqual(test_rule._Ppdm__password, "password")
+        self.assertFalse(test_rule.check_mode)
+        self.assertEqual(type(test_rule.headers), dict)
