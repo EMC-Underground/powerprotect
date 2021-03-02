@@ -61,11 +61,15 @@ class TestUpdateProtectionRule(TestCase):
         self.mock_protection_rule.id = "0000-0000"
         self.mock_protection_rule.target_body = {'id': 'test'}
         self.mock_protection_rule.body = {'body': 'test'}
+        self.future_body = (self.mock_protection_rule.
+                            body.copy())
+        self.future_body.update(self.mock_protection_rule.
+                                target_body)
         patcher_rest_put = mock.patch('powerprotect.protectionrule.'
                                       'Ppdm._rest_put')
         self.mock_rest_put = patcher_rest_put.start()
         (self.mock_rest_put.return_value.json.
-         return_value) = self.mock_protection_rule.body
+         return_value) = self.future_body
         self.mock_rest_put.return_value.status_code = 123
 
         self.addCleanup(mock.patch.stopall)
@@ -81,7 +85,7 @@ class TestUpdateProtectionRule(TestCase):
         self.assertTrue(test_rule.success)
         self.assertEqual(test_rule.status_code, 123)
         self.assertDictEqual(test_rule.response,
-                             self.mock_protection_rule.body)
+                             self.future_body)
         self.assertEqual(test_rule.msg,
                          "Protection Rule id "
                          f"\"{self.mock_protection_rule.name}\" "
@@ -95,7 +99,7 @@ class TestUpdateProtectionRule(TestCase):
         self.assertFalse(test_rule.success)
         self.assertEqual(test_rule.status_code, 123)
         self.assertDictEqual(test_rule.response,
-                             self.mock_protection_rule.body)
+                             self.future_body)
         self.assertEqual(test_rule.msg,
                          "Protection Rule id "
                          f"\"{self.mock_protection_rule.name}\" "
