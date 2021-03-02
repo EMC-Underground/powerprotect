@@ -468,8 +468,8 @@ class TestInit(TestCase):
     def setUp(self):
         self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
         self.rule_dict_token = {'name': 'test_rule',
-                               'server': 'server',
-                               'token': 'token'}
+                                'server': 'server',
+                                'token': 'token'}
         self.rule_dict_bad = self.rule_dict_token.copy()
         self.rule_dict_bad.pop('name')
         self.rule_dict_password = self.rule_dict_token.copy()
@@ -499,7 +499,7 @@ class TestInit(TestCase):
                           powerprotect.ProtectionRule,
                           **self.rule_dict_bad)
 
-    def test_with_token(self):
+    def test_with_password(self):
         test_rule = powerprotect.ProtectionRule(**self.rule_dict_password)
         self.assertEqual(test_rule.name, "test_rule")
         self.assertEqual(test_rule.server, "server")
