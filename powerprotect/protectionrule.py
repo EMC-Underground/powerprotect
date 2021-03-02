@@ -105,7 +105,8 @@ class ProtectionRule(Ppdm):
                 self.failure = True
                 self.fail_msg = return_body.msg
                 self.fail_response = return_body.response
-                self.fail_body = (self.body.copy()).update(self.target_body)
+                self.fail_body = self.body.copy()
+                self.fail_body.update(self.target_body)
         self.target_body = {}
         self.get_rule()
 
@@ -184,7 +185,8 @@ class ProtectionRule(Ppdm):
     def __update_protection_rule(self):
         protectionrule_logger.debug("Method: update_protection_rule")
         return_body = helpers.ReturnBody()
-        future_body = self.body.update(self.target_body)
+        future_body = self.body.copy()
+        future_body.update(self.target_body)
         response = super()._rest_put("/protection-rules"
                                      f"/{self.id}", future_body)
         if response.ok:
