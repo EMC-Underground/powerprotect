@@ -18,7 +18,6 @@ class ProtectionRule(Ppdm):
             self.failure = False
             self.fail_msg = ""
             self.fail_response = {}
-            self.fail_body = {}
             self.name = kwargs['name']
             self.body = {}
             self.target_body = {}
@@ -105,8 +104,6 @@ class ProtectionRule(Ppdm):
                 self.failure = True
                 self.fail_msg = return_body.msg
                 self.fail_response = return_body.response
-                self.fail_body = self.body.copy()
-                self.fail_body.update(self.target_body)
         self.target_body = {}
         self.get_rule()
 
