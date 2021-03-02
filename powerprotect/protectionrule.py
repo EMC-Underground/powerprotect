@@ -17,6 +17,7 @@ class ProtectionRule(Ppdm):
             self.msg = ""
             self.failure = False
             self.fail_msg = ""
+            self.fail_response = {}
             self.name = kwargs['name']
             self.body = {}
             self.target_body = {}
@@ -55,6 +56,7 @@ class ProtectionRule(Ppdm):
             elif return_body.success is False:
                 self.failure = True
                 self.fail_msg = return_body.msg
+                self.fail_response = return_body.response
         self.get_rule()
 
     def create_rule(self, **kwargs):
@@ -79,6 +81,7 @@ class ProtectionRule(Ppdm):
             elif return_body.success is False:
                 self.failure = True
                 self.fail_msg = return_body.msg
+                self.fail_response = return_body.response
         elif self.exists:
             self.msg = f"Protection Rule {self.name} already exists"
         self.get_rule()
@@ -100,6 +103,7 @@ class ProtectionRule(Ppdm):
             elif return_body.success is False:
                 self.failure = True
                 self.fail_msg = return_body.msg
+                self.fail_response = return_body.response
         self.target_body = {}
         self.get_rule()
 
