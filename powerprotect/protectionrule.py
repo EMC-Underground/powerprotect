@@ -179,7 +179,7 @@ class ProtectionRule(Ppdm):
         protectionrule_logger.debug("Method: update_protection_rule")
         return_body = helpers.ReturnBody()
         response = super()._rest_put("/protection-rules"
-                                     f"/{self.id}", self.body)
+                                     f"/{self.id}", self.target_body)
         if response.ok:
             msg = f"Protection Rule id \"{self.name}\" successfully updated"
             return_body.success = True

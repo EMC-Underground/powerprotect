@@ -59,6 +59,7 @@ class TestUpdateProtectionRule(TestCase):
         self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
         self.mock_protection_rule.name = "test_rule"
         self.mock_protection_rule.id = "0000-0000"
+        self.mock_protection_rule.target_body = {'id': 'test'}
         self.mock_protection_rule.body = {'body': 'test'}
         patcher_rest_put = mock.patch('powerprotect.protectionrule.'
                                       'Ppdm._rest_put')
@@ -342,3 +343,155 @@ class TestUpdateRule(TestCase):
         powerprotect.ProtectionRule.update_rule(self.mock_protection_rule)
         self.assertTrue(self.mock_protection_rule.changed)
         self.assertDictEqual(self.mock_protection_rule.target_body, {})
+
+
+class TestDeleteRule(TestCase):
+    def setUp(self):
+        self.mock_protection_rule = mock.MagicMock(spec=powerprotect.
+                                                   ProtectionRule)
+        self.mock_protection_rule.name = "test_rule"
+        self.mock_protection_rule.exists = False
+        self.mock_protection_rule.changed = False
+        self.mock_protection_rule.body = {}
+
+    def tearDown(self):
+        self.mock_protection_rule = None
+
+    def test_delete_rule_not_exists(self):
+        powerprotect.ProtectionRule.delete_rule(self.mock_protection_rule)
+        self.assertFalse(self.mock_protection_rule.exists)
+        self.assertFalse(self.mock_protection_rule.changed)
+
+    def test_delete_rule_exists_no_checkmode(self):
+        (self.mock_protection_rule.
+         _ProtectionRule__delete_protection_rule.
+         return_value.success) = True
+        self.mock_protection_rule.check_mode = False
+        self.mock_protection_rule.exists = True
+        powerprotect.ProtectionRule.delete_rule(self.mock_protection_rule)
+        self.assertEqual(self.mock_protection_rule.msg,
+                         f"Protection rule {self.mock_protection_rule.name} "
+                         "deleted")
+        self.assertTrue(self.mock_protection_rule.changed)
+
+    def test_delete_rule_exists_yes_checkmode(self):
+        self.mock_protection_rule.check_mode = True
+        self.mock_protection_rule.exists = True
+        powerprotect.ProtectionRule.delete_rule(self.mock_protection_rule)
+        self.assertEqual(self.mock_protection_rule.msg,
+                         f"Protection rule {self.mock_protection_rule.name} "
+                         "deleted")
+        self.assertTrue(self.mock_protection_rule.changed)
+
+    def test_delete_rule_exists_no_checkmode_fail(self):
+        (self.mock_protection_rule.
+         _ProtectionRule__delete_protection_rule.
+         return_value.success) = False
+        (self.mock_protection_rule.
+         _ProtectionRule__delete_protection_rule.
+         return_value.msg) = {"error": "id"}
+        self.mock_protection_rule.check_mode = False
+        self.mock_protection_rule.exists = True
+        powerprotect.ProtectionRule.delete_rule(self.mock_protection_rule)
+        self.assertEqual(self.mock_protection_rule.fail_msg, {"error": "id"})
+        self.assertTrue(self.mock_protection_rule.failure)
+
+
+class TestCreateRule(TestCase):
+    def setUp(self):
+        self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
+        self.mock_protection_rule.name = "test_rule"
+        self.mock_protection_rule.exists = False
+        self.mock_protection_rule.changed = False
+        self.rule_dict_good = {'policy_name': 'test_policy',
+                               'inventory_type': 'KUBERNETES',
+                               'label': 'test=test'}
+        self.rule_dict_bad = self.rule_dict_good.copy()
+        self.rule_dict_bad.pop('inventory_type')
+        self.addCleanup(mock.patch.stopall)
+
+    def tearDown(self):
+        self.mock_protection_rule = None
+
+    def test_create_rule_not_exists_no_checkmode_success(self):
+        (self.mock_protection_rule.
+         _ProtectionRule__create_protection_rule.
+         return_value.success) = True
+        self.mock_protection_rule.check_mode = False
+        powerprotect.ProtectionRule.create_rule(self.mock_protection_rule,
+                                                **self.rule_dict_good)
+        self.assertEqual(self.mock_protection_rule.msg,
+                         f"Protection Rule {self.mock_protection_rule.name} "
+                         "created")
+        self.assertTrue(self.mock_protection_rule.changed)
+
+    def test_create_rule_not_exists_no_checkmode_failure(self):
+        (self.mock_protection_rule.
+         _ProtectionRule__create_protection_rule.
+         return_value.success) = False
+        (self.mock_protection_rule.
+         _ProtectionRule__create_protection_rule.
+         return_value.msg) = "message"
+        self.mock_protection_rule.check_mode = False
+        powerprotect.ProtectionRule.create_rule(self.mock_protection_rule,
+                                                **self.rule_dict_good)
+        self.assertEqual(self.mock_protection_rule.fail_msg, "message")
+        self.assertFalse(self.mock_protection_rule.changed)
+        self.assertTrue(self.mock_protection_rule.failure)
+
+    def test_create_rule_not_exists_yes_checkmode(self):
+        self.mock_protection_rule.check_mode = True
+        powerprotect.ProtectionRule.create_rule(self.mock_protection_rule,
+                                                **self.rule_dict_good)
+        self.assertEqual(self.mock_protection_rule.msg,
+                         f"Protection Rule {self.mock_protection_rule.name} "
+                         "created")
+        self.assertTrue(self.mock_protection_rule.changed)
+
+    def test_create_rule_exists(self):
+        self.mock_protection_rule.check_mode = False
+        self.mock_protection_rule.exists = True
+        powerprotect.ProtectionRule.create_rule(self.mock_protection_rule,
+                                                **self.rule_dict_good)
+        self.assertEqual(self.mock_protection_rule.msg,
+                         f"Protection Rule {self.mock_protection_rule.name} "
+                         "already exists")
+        self.assertFalse(self.mock_protection_rule.changed)
+
+    def test_create_rule_missing_kwargs(self):
+        self.assertRaises(KeyError, powerprotect.ProtectionRule.create_rule,
+                          self.mock_protection_rule,
+                          **self.rule_dict_bad)
+
+
+class TestInit(TestCase):
+    def setUp(self):
+        self.mock_protection_rule = mock.Mock(spec=powerprotect.ProtectionRule)
+        self.rule_dict_good = {'name': 'test_rule',
+                               'server': 'server',
+                               'token': 'token'}
+        self.rule_dict_bad = self.rule_dict_good.copy()
+        self.rule_dict_bad.pop('name')
+        patcher_get_policy = mock.patch(
+            'powerprotect.protectionrule.ProtectionRule.get_rule')
+        self.mock_get_policy = patcher_get_policy.start()
+        patcher_login = mock.patch(
+            'powerprotect.protectionrule.Ppdm.login')
+        self.mock_login = patcher_login.start()
+        self.addCleanup(mock.patch.stopall)
+
+    def tearDown(self):
+        self.mock_protection_policy = None
+
+    def test_with_token(self):
+        test_rule = powerprotect.ProtectionRule(**self.rule_dict_good)
+        self.assertEqual(test_rule.name, "test_rule")
+        self.assertEqual(test_rule.server, "server")
+        self.assertEqual(test_rule._token, "token")
+        self.assertFalse(test_rule.check_mode)
+        self.assertEqual(type(test_rule.headers), dict)
+
+    def test_init_missing_kwargs(self):
+        self.assertRaises(powerprotect.PpdmException,
+                          powerprotect.ProtectionRule,
+                          **self.rule_dict_bad)
