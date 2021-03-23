@@ -219,7 +219,7 @@ class TestDeleteProtectionRule(TestCase):
                          self.mock_protection_rule))
         self.assertTrue(test_rule.success)
         self.assertEqual(test_rule.status_code, 123)
-        self.assertDictEqual(test_rule.response, self.json_example)
+        self.assertDictEqual(test_rule.response, {})
         self.assertEqual(test_rule.msg,
                          "Protection Rule id "
                          f"\"{self.mock_protection_rule.name}\" "
