@@ -205,11 +205,12 @@ class ProtectionRule(Ppdm):
         if response.ok:
             msg = f"Protection Rule id \"{self.name}\" successfully deleted"
             return_body.success = True
+            return_body.response = {}
         else:
             msg = f"Protection Rule id \"{self.name}\" not deleted"
             return_body.success = False
+            return_body.response = response.json()
         protectionrule_logger.debug(msg)
         return_body.msg = msg
-        return_body.response = response.json()
         return_body.status_code = response.status_code
         return return_body
