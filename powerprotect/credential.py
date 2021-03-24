@@ -30,7 +30,7 @@ class Credential(Ppdm):
             credential_logger.error(f"Missing required field: {e}")
             raise exceptions.PpdmException(f"Missing required field: {e}")
 
-    def create_rule(self, **kwargs):
+    def create_credential(self, **kwargs):
         cred_type = (kwargs['cred_type']).upper()
         password = kwargs['password']
         method = (kwargs.get('method', 'TOKEN')).upper()
