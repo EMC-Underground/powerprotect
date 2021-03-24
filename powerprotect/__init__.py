@@ -17,6 +17,7 @@ main_logger = get_module_logger(__name__)
 from .ppdm import Ppdm
 from .protectionrule import ProtectionRule
 from .protectionpolicy import ProtectionPolicy
+from .credential import Credential
 from .exceptions import PpdmException
 from ._version import __version__
 
