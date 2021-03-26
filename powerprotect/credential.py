@@ -31,15 +31,9 @@ class Credential(Ppdm):
             raise exceptions.PpdmException(f"Missing required field: {e}")
 
     def create_credential(self, **kwargs):
-        cred_type = (kwargs['cred_type']).upper()
-        password = kwargs['password']
-        method = (kwargs.get('method', 'TOKEN')).upper()
         if not self.exists:
             if not self.check_mode:
-                return_body = self.__create_credential(
-                    cred_type=cred_type,
-                    method=method,
-                    password=password)
+                return_body = self.__create_credential(**kwargs)
             if self.check_mode:
                 credential_logger.info("check mode enabled, "
                                        "no action taken")
@@ -127,15 +121,16 @@ class Credential(Ppdm):
                 return_body.status_code = response.status_code
         return return_body
 
-    def __create_credential(self, cred_type, method, password, **kwargs):
+    def __create_credential(self, **kwargs):
         credential_logger.debug("Method: __create_credential")
         return_body = helpers.ReturnBody()
-        body = {'username': self.name,
+        body = {'username': kwargs.get('username', self.name),
                 'name': self.name,
-                'method': method,
-                'password': password,
-                'type': cred_type
+                'password': kwargs['password'],
+                'type': kwargs['cred_type']
                 }
+        if 'method' in kwargs:
+            body.update({'method': kwargs['method']})
         response = super()._rest_post("/credentials", body)
         if response.ok:
             msg = f"Credential id \"{self.name}\" " \
