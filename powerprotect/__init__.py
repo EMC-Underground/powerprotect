@@ -18,6 +18,7 @@ from .ppdm import Ppdm
 from .protectionrule import ProtectionRule
 from .protectionpolicy import ProtectionPolicy
 from .credential import Credential
+from .assetsource import AssetSource
 from .exceptions import PpdmException
 from ._version import __version__
 
