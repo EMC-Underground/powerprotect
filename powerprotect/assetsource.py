@@ -187,7 +187,8 @@ class AssetSource(Ppdm):
     def __create_assetsource(self, **kwargs):
         assetsource_logger.debug("Method: __create_assetsource")
         return_body = helpers.ReturnBody()
-        certificate = self.__get_host_certificate(self.name, kwargs['port'])
+        certificate = self.__get_host_certificate(kwargs['address'],
+                                                  kwargs['port'])
         self.__accept_host_certificate(certificate.response)
         credential = Credential(name=kwargs['credential_name'],
                                 server=self.server,

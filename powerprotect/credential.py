@@ -126,9 +126,10 @@ class Credential(Ppdm):
         return_body = helpers.ReturnBody()
         body = {'username': kwargs.get('username', self.name),
                 'name': self.name,
-                'password': kwargs['password'],
-                'type': kwargs['cred_type']
+                'password': kwargs['password']
                 }
+        if 'cred_type' in kwargs:
+            body.update({'type': kwargs['cred_type']})
         if 'method' in kwargs:
             body.update({'method': kwargs['method']})
         response = super()._rest_post("/credentials", body)
