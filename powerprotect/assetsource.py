@@ -219,6 +219,7 @@ class AssetSource(Ppdm):
         else:
             msg = f"Assetsource id \"{self.name}\" " \
                    "not created"
+            self.__delete_host_certificate(certificate.response)
             return_body.success = False
         return_body.status_code = response.status_code
         return_body.response = response.json()
@@ -228,7 +229,7 @@ class AssetSource(Ppdm):
     def __get_host_certificate(self, address, port):
         assetsource_logger.debug("Method: __get_host_certificate")
         return_body = helpers.ReturnBody()
-        response = self._rest_get(f"/certificates?host={address}&port={port}"
+        response = super()._rest_get(f"/certificates?host={address}&port={port}"
                                   "&type=Host")
         if response.ok is False:
             return_body.success = False
@@ -244,7 +245,7 @@ class AssetSource(Ppdm):
         assetsource_logger.debug("Method: __accept_host_certificate")
         return_body = helpers.ReturnBody()
         cert['state'] = 'ACCEPTED'
-        response = self._rest_put(f"/certificates/{cert['id']}", cert)
+        response = super()._rest_put(f"/certificates/{cert['id']}", cert)
         if response.ok:
             msg = f"Certificate \"{cert['host']}\" successfully accepted"
             return_body.success = True
@@ -260,7 +261,7 @@ class AssetSource(Ppdm):
     def __delete_host_certificate(self, cert):
         assetsource_logger.debug("Method: __delete_host_certificate")
         return_body = helpers.ReturnBody()
-        response = self._rest_delete(f"/certificates/{cert['id']}")
+        response = super()._rest_delete(f"/certificates/{cert['id']}")
         if response.ok:
             msg = f"Certificate \"{cert['host']}\" successfully deleted"
             return_body.success = True
