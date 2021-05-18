@@ -19,6 +19,7 @@ class AssetSource(Ppdm):
         try:
             self.name = kwargs['name']
             self.id = ""
+            self.type = ""
             self.body = {}
             self.target_body = {}
             self.exists = False
@@ -28,6 +29,7 @@ class AssetSource(Ppdm):
             self.failure = False
             self.fail_msg = ""
             self.fail_response = {}
+            self.assests = {}
             super().__init__(**kwargs)
             if 'token' not in kwargs:
                 super().login()
@@ -42,7 +44,7 @@ class AssetSource(Ppdm):
         tanzu = kwargs.get('tanzu', False)
         vcenter_name = kwargs.get('vcenter_name', '')
         port = kwargs['port']
-        asset_type = kwargs['asset_type']
+        asset_type = (kwargs['asset_type']).upper()
         enable_vsphere_integration = kwargs.get('enable_vsphere_integration',
                                                 False)
         if not self.exists:
@@ -76,6 +78,8 @@ class AssetSource(Ppdm):
         if bool(assetsource.response) is not False:
             self.exists = True
             self.id = assetsource.response['id']
+            self.type = assetsource.response['type']
+            self.assets = self.__get_all_assets()
         else:
             self.exists = False
             self.id = ""
@@ -120,8 +124,39 @@ class AssetSource(Ppdm):
                 self.fail_response = return_body.response
         self.get_assetsource()
 
+    def remove_all_assets_from_policies(self):
+        assetsource_logger.debug("Method: remove_all_assets_from_policies")
+        if self.exists:
+            for asset in self.assets:
+                if asset['protectionPolicyId']:
+                    body = [asset['id']]
+                    response = super()._rest_post("/protection-policies"
+                                                  f"/{asset['protectionPolicyId']}"
+                                                  "/asset-unassignments", body)
+                    if response.ok is False:
+                        assetsource_logger.error("Unable to remove asset:"
+                                                 f"{asset['name']} from policy:"
+                                                 f"{asset['protectionPolicy']['name']}")
+                    if response.ok:
+                        assetsource_logger.debug("Successfully removed asset:"
+                                                 f"{asset['name']} from policy:"
+                                                 f"{asset['protectionPolicy']['name']}")
+            self.get_assetsource()
+
+    def __get_all_assets(self):
+        assetsource_logger.debug("Method: __get_all_assets")
+        if self.type == "KUBERNETES":
+            asset_source_type = "k8s"
+        if self.type == "VCENTER":
+            asset_source_type = "vm"
+        response = super()._rest_get("/assets?filter=details."
+                                     f"{asset_source_type}.inventorySourceId"
+                                     f"%20eq%20%22{self.id}%22")
+        if len(response.json()['content']) > 0:
+            return response.json()['content']
+
     def __get_assetsource_by_name(self, **kwargs):
-        assetsource_logger.debug("Method: get_assetsource_by_name")
+        assetsource_logger.debug("Method: __get_assetsource_by_name")
         return_body = helpers.ReturnBody()
         name = self.name
         if 'name' in kwargs:
@@ -230,7 +265,7 @@ class AssetSource(Ppdm):
         assetsource_logger.debug("Method: __get_host_certificate")
         return_body = helpers.ReturnBody()
         response = super()._rest_get(f"/certificates?host={address}&port={port}"
-                                  "&type=Host")
+                                     "&type=Host")
         if response.ok is False:
             return_body.success = False
             return_body.fail_msg = response.json()
