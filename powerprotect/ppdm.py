@@ -86,6 +86,21 @@ class Ppdm:
         return_body.status_code = response.status_code
         return return_body
 
+    def get_all_asset_sources(self):
+        pass
+
+    def get_all_assets(self):
+        pass
+
+    def get_all_credentials(self):
+        pass
+
+    def get_all_protection_policies(self):
+        pass
+
+    def get_all_protection_rules(self):
+        pass
+
     def __get_protection_rules(self):
         ppdm_logger.debug("Method: __get_protection_rules")
         return_body = helpers.ReturnBody()

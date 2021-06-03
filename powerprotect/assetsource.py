@@ -15,6 +15,35 @@ accpeted_types = ["DATADOMAINMANAGEMENTCENTER", "SMISPROVIDER", "DDSYSTEM",
 
 
 class AssetSource(Ppdm):
+    """ Class to define an Asset Source object
+
+    Asset source object creation require: name, server, password
+    At object creation this library will go gather any information about
+    this object, if it exists on the PPDM server.
+
+    There are five interactive methods intended for user interaction:
+        create_assetsource
+        get_assetsource (run after creation and after all modification
+                         operations automatically)
+        update_assetsource
+        delete_assetsource
+        remove_all_assets_from_policies
+
+    Attributes:
+        name (str): Display name of the asset source (unique)
+        id (str): Unique ID of the asset source (unique)
+        type (str): Asset source type, only from list of acepted types
+        body (dict): Return payload from PPDM server.
+        target_body (dict): Body to be used for updates to the object
+        exists (bool): Used to detirmine if the object exists on the PPDM
+                       server
+        check_mode (bool): If true pretend to modify object on the PPDM server
+        msg (str): Return message of previous operations
+        failure (bool): If true, the previous operation failed
+        fail_msg (str): Detailed message from previous failure
+        fail_response (dict): Payload returned from PPDM after a failure
+        assets (list): List of all assets that are part of this asset source
+    """
     def __init__(self, **kwargs):
         try:
             self.name = kwargs['name']
@@ -29,7 +58,7 @@ class AssetSource(Ppdm):
             self.failure = False
             self.fail_msg = ""
             self.fail_response = {}
-            self.assests = {}
+            self.assets = []
             super().__init__(**kwargs)
             if 'token' not in kwargs:
                 super().login()
@@ -39,6 +68,28 @@ class AssetSource(Ppdm):
             raise exceptions.PpdmException(f"Missing required field: {e}")
 
     def create_assetsource(self, **kwargs):
+        """ Method to create asset source if not present
+
+        This method will create an asset source if not already present. After
+        this method runs the get_assetsource method will execute updating the
+        objects attributes.
+
+        Check_Mode: True
+
+        Args:
+            address (str): FQDN or IP of asset source
+            port (int): Port to communicate with asset source
+            asset_type (str): PPDM Asset Source Type
+            credential_name (str): Unique name of cred to use for auth
+            tanzu (bool, default: False): For k8s tanzu clusters specify True
+            vcenter_name (str): If Tanzu k8s, specify unique vcenter name. This
+                                must already be an asset source in PPDM
+            enable_vsphere_integration (bool): For vcenter asset source type,
+                                               set to True in order to enable.
+
+        Returns:
+            None
+        """
         address = kwargs['address']
         credential_name = kwargs['credential_name']
         tanzu = kwargs.get('tanzu', False)
@@ -74,6 +125,18 @@ class AssetSource(Ppdm):
         self.get_assetsource()
 
     def get_assetsource(self):
+        """ Method to gather asset source information if present
+
+        This method can be thought of as a sync between PPDM and an asset
+        source object. As such it is run at object creation time, and after
+        each of the other four methods. This method updates attributes only
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         assetsource = self.__get_assetsource_by_name()
         if bool(assetsource.response) is not False:
             self.exists = True
@@ -83,9 +146,26 @@ class AssetSource(Ppdm):
         else:
             self.exists = False
             self.id = ""
+            self.assets = []
         self.body = assetsource.response
 
     def update_assetsource(self):
+        """ Method to update asset source if present
+
+        This method uses the target_body attribute to update the asset source
+        in PPDM. If there is no asset sourcein PPDM  or target_body
+        attribute, nothing will happen. After this method completes, the
+        get_assetsource method will run and the target_body attribute will
+        clear itself.
+
+        Check_Mode: True
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         if (self.exists and
                 self.target_body and
                 helpers._body_match(self.body, self.target_body) is False):
@@ -107,6 +187,20 @@ class AssetSource(Ppdm):
         self.get_assetsource()
 
     def delete_assetsource(self):
+        """ Method to destroy asset source if present
+
+        This method will delete the asset source from PPDM. If the asset source
+        does not exist nothing will happen. After this method completes the
+        get_assetsource method will run to update this objects attributes.
+
+        Check_Mode: True
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         if self.exists:
             if not self.check_mode:
                 return_body = self.__delete_assetsource()
@@ -125,22 +219,42 @@ class AssetSource(Ppdm):
         self.get_assetsource()
 
     def remove_all_assets_from_policies(self):
+        """ Method to remove an asset sources assets from any protection
+            policies
+
+        This method finds any assets from the objects asset source that belong
+        to a protection policy. Typically used before removing an asset
+        source. After this method completes the get_assetsource method will
+        run to update the objects attributes.
+
+        Check_Mode: False
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         assetsource_logger.debug("Method: remove_all_assets_from_policies")
         if self.exists:
             for asset in self.assets:
                 if asset['protectionPolicyId']:
                     body = [asset['id']]
-                    response = super()._rest_post("/protection-policies"
-                                                  f"/{asset['protectionPolicyId']}"
-                                                  "/asset-unassignments", body)
+                    response = super()._rest_post(f"""/protection-policies
+                                                  /{asset['protection'
+                                                  'PolicyId']}
+                                                  /asset-unassignments""",
+                                                  body)
                     if response.ok is False:
-                        assetsource_logger.error("Unable to remove asset:"
-                                                 f"{asset['name']} from policy:"
-                                                 f"{asset['protectionPolicy']['name']}")
+                        assetsource_logger.error(f"""Unable to remove asset:
+                                                 {asset['name']} from policy:
+                                                 {asset['protectionPolicy']
+                                                 ['name']}""")
                     if response.ok:
-                        assetsource_logger.debug("Successfully removed asset:"
-                                                 f"{asset['name']} from policy:"
-                                                 f"{asset['protectionPolicy']['name']}")
+                        assetsource_logger.debug(f"""Successfully removed
+                                                 asset: {asset['name']} from
+                                                 policy: {asset['protection'
+                                                 'Policy']['name']}""")
             self.get_assetsource()
 
     def __get_all_assets(self):
@@ -264,8 +378,8 @@ class AssetSource(Ppdm):
     def __get_host_certificate(self, address, port):
         assetsource_logger.debug("Method: __get_host_certificate")
         return_body = helpers.ReturnBody()
-        response = super()._rest_get(f"/certificates?host={address}&port={port}"
-                                     "&type=Host")
+        response = super()._rest_get(f"/certificates?host={address}&"
+                                     f"port={port}&type=Root")
         if response.ok is False:
             return_body.success = False
             return_body.fail_msg = response.json()
