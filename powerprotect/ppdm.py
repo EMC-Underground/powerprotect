@@ -86,8 +86,23 @@ class Ppdm:
         return_body.status_code = response.status_code
         return return_body
 
-    def get_all_asset_sources(self):
-        pass
+    def get_all_asset_sources(self, **kwargs):
+        ppdm_logger.debug("Method: get_all_asset_sources")
+        asset_type = kwargs.get('type', '')
+        return_body = helpers.ReturnBody()
+        url = "/inventory-sources"
+        if asset_type:
+            url += f"?filter=type%20eq%20%22{asset_type}%22"
+        response = self._rest_get(url)
+        if response.ok is False:
+            return_body.success = False
+            return_body.fail_msg = response.json()
+            return_body.status_code = response.status_code
+        if response.ok:
+            return_body.success = True
+            return_body.response = response.json()['content']
+            return_body.status_code = response.status_code
+        return return_body
 
     def get_all_assets(self):
         pass

@@ -1,3 +1,4 @@
+import paramiko
 from powerprotect.ppdm import Ppdm
 from powerprotect.credential import Credential
 from powerprotect import exceptions
@@ -54,6 +55,7 @@ class AssetSource(Ppdm):
             self.exists = False
             self.changed = False
             self.check_mode = kwargs.get('check_mode', False)
+            self.discovery = {}
             self.msg = ""
             self.failure = False
             self.fail_msg = ""
@@ -67,7 +69,8 @@ class AssetSource(Ppdm):
             assetsource_logger.error(f"Missing required field: {e}")
             raise exceptions.PpdmException(f"Missing required field: {e}")
 
-    def create_assetsource(self, **kwargs):
+    def create_assetsource(self, credential_id=None, credential_name=None,
+                           **kwargs):
         """ Method to create asset source if not present
 
         This method will create an asset source if not already present. After
@@ -90,12 +93,15 @@ class AssetSource(Ppdm):
         Returns:
             None
         """
-        address = kwargs['address']
-        credential_name = kwargs['credential_name']
+        try:
+            address = kwargs['address']
+            port = kwargs['port']
+            asset_type = (kwargs['asset_type']).upper()
+        except KeyError as e:
+            raise exceptions.PpdmException(f"Missing required argument: {e}")
         tanzu = kwargs.get('tanzu', False)
         vcenter_name = kwargs.get('vcenter_name', '')
-        port = kwargs['port']
-        asset_type = (kwargs['asset_type']).upper()
+        vcenter_id = kwargs.get('vcenter_id', '')
         enable_vsphere_integration = kwargs.get('enable_vsphere_integration',
                                                 False)
         if not self.exists:
@@ -103,8 +109,10 @@ class AssetSource(Ppdm):
                 return_body = self.__create_assetsource(
                     address=address,
                     credential_name=credential_name,
+                    credential_id=credential_id,
                     tanzu=tanzu,
                     vcenter_name=vcenter_name,
+                    vcenter_id=vcenter_id,
                     port=port,
                     asset_type=asset_type,
                     enable_vsphere_integration=enable_vsphere_integration)
@@ -143,10 +151,12 @@ class AssetSource(Ppdm):
             self.id = assetsource.response['id']
             self.type = assetsource.response['type']
             self.assets = self.__get_all_assets()
+            self.__get_asset_source_discovery()
         else:
             self.exists = False
             self.id = ""
             self.assets = []
+            self.discovery = {}
         self.body = assetsource.response
 
     def update_assetsource(self):
@@ -257,6 +267,57 @@ class AssetSource(Ppdm):
                                                  'Policy']['name']}""")
             self.get_assetsource()
 
+    def add_root_cert(self, **kwargs):
+        assetsource_logger.debug("Method: add_root_cert")
+        try:
+            username = kwargs['ssh_username']
+            password = kwargs['ssh_password']
+            base64_cert = kwargs['base64_cert']
+        except KeyError as e:
+            assetsource_logger.error(f"Missing required field: {e}")
+            raise exceptions.PpdmException(f"Missing required field: {e}")
+        command = ("/usr/local/brs/bin/ppdmtool -importcert -alias "
+                   f"{self.name} -file /home/admin/cert.pem -type BASE64")
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(self.server, username=username, password=password)
+        ftp = ssh.open_sftp()
+        file = ftp.file('cert.pem', 'w', -1)
+        file.write(base64_cert)
+        file.flush()
+        ftp.close()
+        stdin, stdout, stderr = ssh.exec_command(command, timeout=30)
+        error = stderr.read()
+        error = error.decode("utf-8")
+        output = stdout.read()
+        output = output.decode("utf-8")
+        ssh.close()
+        if not ("Certificate was added to keystore" in error or
+                "already exists" in output):
+            assetsource_logger.error("The certificate was not able to be "
+                                     "added to the trust store.")
+            assetsource_logger.error(f"stderr: {error}")
+            assetsource_logger.error(f"stdout: {output}")
+            return False
+        assetsource_logger.debug("Certificate was successfully added")
+        return True
+
+    def __get_asset_source_discovery(self):
+        assetsource_logger.debug("Method: __get_asset_source_discovery")
+        response = super()._rest_get("/discoveries?filter=start%20eq%20%22%2F"
+                                     f"inventory-sources%2F{self.id}%22")
+        if not response.json()['content']:
+            assetsource_logger.error("Unable to find discovery schedule")
+        self.discovery = response.json()['content'][0]
+
+    def __update_asset_source_discovery(self):
+        assetsource_logger.debug("Method: __update_asset_source_discovery")
+        response = super()._rest_put(f"/discoveries/{self.discovery['id']}",
+                                     self.discovery)
+        if not response.ok:
+            assetsource_logger.error("Unable to update discovery id: "
+                                     f"{self.discovery['id']}")
+
     def __get_all_assets(self):
         assetsource_logger.debug("Method: __get_all_assets")
         if self.type == "KUBERNETES":
@@ -338,23 +399,33 @@ class AssetSource(Ppdm):
         return_body = helpers.ReturnBody()
         certificate = self.__get_host_certificate(kwargs['address'],
                                                   kwargs['port'])
-        self.__accept_host_certificate(certificate.response)
-        credential = Credential(name=kwargs['credential_name'],
-                                server=self.server,
-                                token=self._token)
+        if not certificate.response['state'] == 'ACCEPTED':
+            assetsource_logger.debug("Cert not accepted. Accepting now")
+            self.__accept_host_certificate(certificate.response)
+        credential_id = kwargs.get('credential_id', '')
+        if not credential_id:
+            credential = Credential(name=kwargs['credential_name'],
+                                    server=self.server,
+                                    token=self._token)
+            credential_id = credential.id
         body = {}
         body['address'] = kwargs['address']
         body['name'] = self.name
         body['port'] = kwargs['port']
         body['type'] = kwargs['asset_type']
-        body.update({'credentials': {'id': credential.id}})
+        vcenter_id = kwargs.get('vcenter_id', '')
+        body.update({'credentials': {'id': credential_id}})
         if kwargs['asset_type'] == 'KUBERNETES' and kwargs['tanzu']:
-            vcenter = self.__get_assetsource_by_name(name=kwargs
-                                                     ['vcenter_name'])
-            if vcenter.success:
-                body.update({'details':
-                             {'k8s':
-                              {'vCenterId': vcenter.response['id']}}})
+            if not vcenter_id:
+                vcenter = self.__get_assetsource_by_name(name=kwargs
+                                                         ['vcenter_name'])
+                vcenter_id = vcenter.response['id']
+            if not vcenter_id:
+                raise exceptions.PpdmException("Invalid or missing: "
+                                               "vcenter_name or vcenter_id")
+            body.update({'details':
+                         {'k8s':
+                          {'vCenterId': vcenter_id}}})
         if kwargs['asset_type'] == 'VCENTER':
             body.update({'details':
                          {'vCenter':
@@ -364,6 +435,10 @@ class AssetSource(Ppdm):
         if response.ok:
             msg = f"Assetsource id \"{self.name}\" " \
                    "successfully created"
+            self.id = response.json()['id']
+            self.__get_asset_source_discovery()
+            self.discovery['schedule']['enabled'] = True
+            self.__update_asset_source_discovery()
             return_body.success = True
         else:
             msg = f"Assetsource id \"{self.name}\" " \

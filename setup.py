@@ -26,6 +26,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'requests>=2.24.0',
+        'paramiko>=2.7.2',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
