@@ -280,7 +280,11 @@ class AssetSource(Ppdm):
                    f"{self.name} -file /home/admin/cert.pem -type BASE64")
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(self.server, username=username, password=password)
+        try:
+            ssh.connect(self.server, username=username, password=password)
+        except paramiko.ssh_exception.AuthenticationException as authError:
+            raise exceptions.PpdmException("Invalid auth credentials: "
+                                           f"{authError}")
         ftp = ssh.open_sftp()
         file = ftp.file('cert.pem', 'w', -1)
         file.write(base64_cert)
@@ -345,7 +349,7 @@ class AssetSource(Ppdm):
         if response.ok:
             if not response.json()['content']:
                 err_msg = f"Assetsource not found: {self.name}"
-                assetsource_logger.info(err_msg)
+                assetsource_logger.debug(err_msg)
                 return_body.success = True
                 return_body.status_code = response.status_code
                 return_body.response = {}

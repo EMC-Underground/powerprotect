@@ -111,7 +111,7 @@ class Credential(Ppdm):
         if response.ok:
             if not response.json()['content']:
                 err_msg = f"Credential not found: {self.name}"
-                credential_logger.info(err_msg)
+                credential_logger.debug(err_msg)
                 return_body.success = True
                 return_body.status_code = response.status_code
                 return_body.response = {}

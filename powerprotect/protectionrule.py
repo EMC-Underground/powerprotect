@@ -169,7 +169,7 @@ class ProtectionRule(Ppdm):
         if response.ok:
             if not response.json()['content']:
                 err_msg = f"Protection rule not found: {self.name}"
-                protectionrule_logger.info(err_msg)
+                protectionrule_logger.debug(err_msg)
                 return_body.success = True
                 return_body.status_code = response.status_code
                 return_body.response = {}
