@@ -250,11 +250,10 @@ class AssetSource(Ppdm):
             for asset in self.assets:
                 if asset['protectionPolicyId']:
                     body = [asset['id']]
-                    response = super()._rest_post(f"""/protection-policies
-                                                  /{asset['protection'
-                                                  'PolicyId']}
-                                                  /asset-unassignments""",
-                                                  body)
+                    url = ("/protection-policies/"
+                           f"{asset['protectionPolicyId']}"
+                           "/asset-unassignments")
+                    response = super()._rest_post(url, body)
                     if response.ok is False:
                         assetsource_logger.error(f"""Unable to remove asset:
                                                  {asset['name']} from policy:
