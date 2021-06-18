@@ -30,15 +30,15 @@ class ProtectionPolicy(Ppdm):
             raise exceptions.PpdmException(f"Missing required field: {e}")
 
     def get_policy(self):
-        protection_rule = self.__get_protection_policy_by_name()
-        if bool(protection_rule.response) is not False:
+        protection_policy = self.__get_protection_policy_by_name()
+        if bool(protection_policy.response) is not False:
             self.exists = True
-        self.body = protection_rule.response
+        self.body = protection_policy.response
 
     def delete_policy(self):
         if self.exists:
             if not self.check_mode:
-                return_body = self.__delete_protection_rule(self.body['id'])
+                return_body = self.__delete_protection_policy(self.body['id'])
                 self.exists = False
             if self.check_mode:
                 protectionpolicy_logger.info("check mode enabled, "
@@ -59,7 +59,7 @@ class ProtectionPolicy(Ppdm):
         label = kwargs['label']
         if not self.exists:
             if not self.check_mode:
-                return_body = self.__create_protection_rule(
+                return_body = self.__create_protection_policy(
                     rule_name=self.name,
                     policy_name=policy_name,
                     inventory_type=inventory_type,
@@ -84,7 +84,7 @@ class ProtectionPolicy(Ppdm):
                 helpers._body_match(self.body, self.target_body) is False):
             self.body.update(self.target_body)
             if not self.check_mode:
-                return_body = self.__update_protection_rule(self.body)
+                return_body = self.__update_protection_policy(self.body)
                 self.get_rule()
             if self.check_mode:
                 protectionpolicy_logger.info("check mode enabled, "
@@ -99,9 +99,9 @@ class ProtectionPolicy(Ppdm):
                 self.failure = True
                 self.fail_msg = return_body.fail_msg
 
-    def __create_protection_rule(self, policy_name, rule_name, inventory_type,
+    def __create_protection_policy(self, policy_name, rule_name, inventory_type,
                                  label, **kwargs):
-        protectionpolicy_logger.debug("Method: create_protection_rule")
+        protectionpolicy_logger.debug("Method: create_protection_policy")
         return_body = helpers.ReturnBody()
         inventory_types = ["KUBERNETES",
                            "VMWARE_VIRTUAL_MACHINE",
@@ -138,7 +138,7 @@ class ProtectionPolicy(Ppdm):
                         'id': '00000000-0000-4000-a000-000000000000'
                     }
                     }
-            response = self._rest_post("/protection-rules", body)
+            response = self._rest_post("/protection-policies", body)
             if response.ok is False:
                 protectionpolicy_logger.error("Protection Rule not Created")
                 return_body.success = False
@@ -153,7 +153,7 @@ class ProtectionPolicy(Ppdm):
     def __get_protection_policy_by_name(self):
         protectionpolicy_logger.debug("Method: get_protection_policy_by_name")
         return_body = helpers.ReturnBody()
-        response = super()._rest_get("/protection-rules"
+        response = super()._rest_get("/protection-policies"
                                      f"?filter=name%20eq%20%22{self.name}%22")
         if response.ok is False:
             return_body.success = False
@@ -172,12 +172,12 @@ class ProtectionPolicy(Ppdm):
                 return_body.status_code = response.status_code
         return return_body
 
-    def __update_protection_rule(self, body):
-        protectionpolicy_logger.debug("Method: update_protection_rule")
+    def __update_protection_policy(self, body):
+        protectionpolicy_logger.debug("Method: update_protection_policy")
         return_body = helpers.ReturnBody()
-        protection_rule_id = body["id"]
-        response = self._rest_put("/protection-rules"
-                                  f"/{protection_rule_id}", body)
+        protection_policy_id = body["id"]
+        response = self._rest_put("/protection-policies"
+                                  f"/{protection_policy_id}", body)
         if not response.ok:
             protectionpolicy_logger.error("Protection Rule not Updated")
             return_body.success = False
@@ -189,10 +189,10 @@ class ProtectionPolicy(Ppdm):
             return_body.status_code = response.status_code
         return return_body
 
-    def __delete_protection_rule(self, id):
-        protectionpolicy_logger.debug("Method: delete_protection_rule")
+    def __delete_protection_policy(self, id):
+        protectionpolicy_logger.debug("Method: delete_protection_policy")
         return_body = helpers.ReturnBody()
-        response = self._rest_delete(f"/protection-rules/{id}")
+        response = self._rest_delete(f"/protection-policies/{id}")
         if not response.ok:
             protectionpolicy_logger.error(f"Protection Rule id \"{id}\" "
                                           "not deleted")
