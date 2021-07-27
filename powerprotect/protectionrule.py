@@ -138,6 +138,7 @@ class ProtectionRule(Ppdm):
                     }],
                     'connditionConnector': 'AND',
                     'logicalOperator': 'AND',
+                    'category': 'COMPOUND',
                     'inventorySourceType': inventory_type,
                     'priority': kwargs.get('priority', 1),
                     'tenant': {
