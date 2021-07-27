@@ -137,6 +137,7 @@ class ProtectionRule(Ppdm):
                         'assetAttributeValue': label
                     }],
                     'connditionConnector': 'AND',
+                    'logicalOperator': 'AND',
                     'inventorySourceType': inventory_type,
                     'priority': kwargs.get('priority', 1),
                     'tenant': {
