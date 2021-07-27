@@ -134,7 +134,7 @@ class ProtectionRule(Ppdm):
                     'conditions': [{
                         'assetAttributeName': 'userTags',
                         'operator': 'EQUALS',
-                        'assetAttributeValue': label
+                        'assetAttributeValues': [label]
                     }],
                     'connditionConnector': 'AND',
                     'logicalOperator': 'AND',
