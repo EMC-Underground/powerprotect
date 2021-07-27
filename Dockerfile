@@ -8,6 +8,8 @@ RUN apk upgrade --purge && \
                                  libffi-dev \
                                  build-base \
                                  openssl-dev \
+                                 make \
+                                 cmake \
                                  cargo \
                                  python3-dev && \
     pip install --upgrade --no-cache-dir pip && \
