@@ -9,7 +9,7 @@ before_install:
   - pip install -U pytest
   - pip install -U pytest-cov
   - echo $DOCKER_PASSWORD | docker login -u "$DOCKER_USERNAME" --password-stdin
-  - docker build -t emcunderground/powerprotect:latest .
+    #  - docker build -t emcunderground/powerprotect:latest .
 install:
   - pip install -r requirements.txt
 script:
